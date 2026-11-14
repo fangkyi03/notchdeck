@@ -75,6 +75,11 @@ figcaption { color: var(--muted); font-size: 13px; padding: 6px 4px 0; }
   <a href="#keys">快捷键</a>
   <div class="grp">页面</div>
   <a href="#p-messages">消息提醒</a>
+  <a href="#p-shelf">文件中转</a>
+  <a href="#p-translate">快捷翻译</a>
+  <a href="#p-calendar">日程</a>
+  <a href="#p-water">饮水提醒</a>
+  <a href="#p-devices">设备电量</a>
   <a href="#p-ai">AI 额度</a>
   <a href="#p-details">模型明细</a>
   <a href="#p-music">音乐与歌词</a>
@@ -89,6 +94,8 @@ figcaption { color: var(--muted); font-size: 13px; padding: 6px 4px 0; }
   <a href="#s-compact">收起内容</a>
   <a href="#s-pages">展开页面</a>
   <a href="#s-ai">添加 AI 额度来源</a>
+  <a href="#s-status">系统状态提示</a>
+  <a href="#update">自动更新</a>
   <div class="grp">其他</div>
   <a href="#faq">常见问题</a>
   <a href="#data">数据位置与卸载</a>
@@ -150,6 +157,8 @@ npm run tauri build    # 打包安装包</code></pre>
 <li><b>移动</b>：按住收起的小岛（或展开面板的顶栏空白处）拖动。</li>
 <li><b>贴顶</b>：拖回距离顶边 16 像素以内会自动吸附，恢复刘海形态。</li>
 <li><b>侧边竖向</b>：拖到屏幕左边或右边 28 像素以内，变成竖向胶囊，可以沿边上下拖动；竖向时只显示图标类内容（歌词、网速等长文字会隐藏）。</li>
+<li><b>贴底部</b>：拖到屏幕底边 28 像素以内，贴在底部，展开时面板向上弹出。</li>
+<li><b>指示条</b>：设置 › 外观与皮肤 › 形态 选「指示条」，收起时只是一条细线，鼠标移上去展开。</li>
 <li><b>换屏</b>：直接拖到另一块屏幕即可，松手后会记住。也可以在 设置 › 常规 › 显示在 中选择。</li>
 <li><b>锁定</b>：设置 › 常规 › 锁定位置，防止误拖。「回到顶部居中」可以一键复位。</li>
 </ul>
@@ -171,6 +180,7 @@ npm run tauri build    # 打包安装包</code></pre>
 <tbody>
 <tr><td><kbd>⌘ ⇧ Space</kbd> / <kbd>Ctrl Shift Space</kbd></td><td>展开 / 收起小岛</td></tr>
 <tr><td><kbd>⌘ ⇧ V</kbd> / <kbd>Ctrl Shift V</kbd></td><td>打开剪贴板页</td></tr>
+<tr><td><kbd>⌘ ⇧ T</kbd> / <kbd>Ctrl Shift T</kbd></td><td>翻译剪贴板里最新的文字</td></tr>
 <tr><td>（未设置）</td><td>打开待办页</td></tr>
 <tr><td><kbd>Esc</kbd></td><td>收起</td></tr>
 <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>展开时切换页面</td></tr>
@@ -187,6 +197,61 @@ npm run tauri build    # 打包安装包</code></pre>
 <ul>
 <li><b>任务栏闪烁</b>：微信、QQ 收到消息时会让任务栏按钮闪烁，NotchDeck 据此提醒，不读取聊天内容；切换到该应用后提醒自动消失。微信缩到托盘时没有任务栏按钮，此时无法提醒。</li>
 <li><b>系统通知</b>：右侧列出通知中心里的通知（标题与正文）。需要在 <b>设置 › 隐私和安全性 › 通知</b>（Windows 10 为 设置 › 隐私 › 通知）中允许应用访问通知；QQ 等应用还需在自身设置中开启「使用系统通知」。</li>
+</ul>
+
+<h2 id="p-shelf">文件中转</h2>
+<figure><img src="screenshots/page-shelf.png" alt="文件中转页"></figure>
+<ul>
+<li><b>暂存</b>：从访达 / 资源管理器把文件或文件夹拖到小岛上（收起时也可以），小岛会展开并切到文件中转页，松手即暂存。只记录文件位置，不会复制文件。</li>
+<li><b>拖出</b>：按住一个文件拖到聊天窗口、邮件、文件夹等任何地方；<kbd>⌘</kbd> / <kbd>Ctrl</kbd> + 点击可以多选后一起拖出。</li>
+<li><b>双击</b>打开文件；悬停后的按钮依次是：在访达 / 资源管理器中显示、复制文件（之后可直接 <kbd>⌘V</kbd> / <kbd>Ctrl V</kbd> 粘贴）、从列表移除。</li>
+<li>文件被移动或删除后显示为灰色「已移动或删除」。</li>
+</ul>
+
+<h2 id="p-translate">快捷翻译</h2>
+<figure><img src="screenshots/page-translate.png" alt="快捷翻译页"></figure>
+<ul>
+<li>先在 设置 › 翻译 选择服务（DeepSeek、Kimi、通义千问、硅基流动、火山方舟、OpenAI 或自定义）并填写 API Key。</li>
+<li>在左侧输入或粘贴文字，按 <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> 或点「翻译」；「翻译剪贴板」直接翻译最近复制的文字。</li>
+<li>方向默认「自动」：中文译成英文，其他语言译成中文；也可以固定译成中文、英文、日文、韩文。</li>
+<li>任何地方按 <kbd>⌘ ⇧ T</kbd> / <kbd>Ctrl Shift T</kbd>：小岛展开并立即翻译剪贴板内容。</li>
+</ul>
+<div class="tip">翻译时，原文会发送到你选择的服务。</div>
+
+<h2 id="p-calendar">日程</h2>
+<figure><img src="screenshots/page-calendar.png" alt="日程页"></figure>
+<ul>
+<li>左边月历中有日程的日子带彩色小点；点某一天，右边列出当天日程。今天的顶部显示下一个会议还有多久。</li>
+<li>点「+ 新增」添加本机日程（标题、开始时间、时长）；本机日程可以悬停后删除，远程日历只读。</li>
+<li>会议开始前（默认 10 分钟）在小岛上提醒；收起时可以显示「下一个日程」。</li>
+<li>添加日历：设置 › 日历，见下表。</li>
+</ul>
+<table>
+<thead><tr><th>日历</th><th>添加方式</th></tr></thead>
+<tbody>
+<tr><td>iCloud（推荐 CalDAV）</td><td>添加 CalDAV 账户：地址 <code>https://caldav.icloud.com</code>，账号为 Apple ID，密码在 <a href="https://appleid.apple.com">appleid.apple.com</a> 生成「App 专用密码」</td></tr>
+<tr><td>iCloud 公开日历</td><td>日历 App 中共享日历 › 勾选「公开日历」，复制 webcal 链接，添加订阅链接</td></tr>
+<tr><td>Google 日历</td><td>日历设置 › 集成日历 › 「iCal 格式的私密地址」，添加订阅链接</td></tr>
+<tr><td>飞书 / 钉钉 / 企业微信</td><td>在各自日历设置中找到「订阅 / 导出日历」或 CalDAV 同步，填订阅链接或 CalDAV 地址与账号</td></tr>
+<tr><td>Outlook / Exchange</td><td>Outlook 网页版 › 设置 › 日历 › 共享日历 › 发布日历，复制 ICS 链接</td></tr>
+<tr><td>.ics 文件</td><td>设置 › 日历 › 导入 .ics 文件，导入为本机日程</td></tr>
+</tbody>
+</table>
+
+<h2 id="p-water">饮水提醒</h2>
+<figure><img src="screenshots/page-water.png" alt="饮水提醒页"></figure>
+<ul>
+<li>点「喝一口」记录一次（默认 250 ml），「大杯」记双份，「撤销」取消上一次。</li>
+<li>在 设置 › 天气 · 饮水 · 专注 中打开提醒，设置每日目标、每次饮水量、提醒间隔和时段；在时段内距离上次喝水超过间隔时提醒，达到目标后不再提醒。</li>
+</ul>
+
+<h2 id="p-devices">设备电量</h2>
+<figure><img src="screenshots/page-devices.png" alt="设备电量页"></figure>
+<ul>
+<li>显示无线鼠标、键盘、触控板、耳机、手柄的电量，每 2 分钟刷新；AirPods 分别显示左耳、右耳和充电盒。</li>
+<li>电量低于 20% 变橙色、低于 10% 变红色，并在小岛上提醒一次。</li>
+<li><span class="tag mac">macOS</span> 支持 Apple 键盘 / 鼠标 / 触控板，以及 AirPods、Beats 等向系统报告电量的耳机；部分第三方蓝牙键鼠不向系统报告电量，暂时无法显示。</li>
+<li><span class="tag win">Windows</span> 支持在「设置 › 蓝牙和设备」中能看到电量的蓝牙设备。</li>
 </ul>
 
 <h2 id="p-ai">AI 额度</h2>
@@ -224,7 +289,8 @@ npm run tauri build    # 打包安装包</code></pre>
 <h2 id="p-todo">待办</h2>
 <figure><img src="screenshots/page-todo.png" alt="待办页"></figure>
 <ul>
-<li>在输入框输入内容，按 <kbd>Enter</kbd> 添加；点左边的圆圈标记完成。</li>
+<li>左上角切换四个视图：<b>今天</b>、<b>日历</b>（月历上点某天，查看或添加那天的待办）、<b>历史</b>（按日期列出过去的完成情况）、<b>笔记</b>（每天一页，自动保存）。</li>
+<li>在输入框输入内容，按 <kbd>Enter</kbd> 添加；右侧日期可以把待办安排到以后的某一天；点左边的圆圈标记完成。</li>
 <li>点「开始」把任务设为<b>进行中</b>（同一时间只有一个）；悬停后点 × 删除。</li>
 <li>左边的圆环是今天的完成进度；没完成的任务会自动顺延到第二天。</li>
 </ul>
@@ -240,7 +306,7 @@ npm run tauri build    # 打包安装包</code></pre>
 <h2 id="p-clipboard">剪贴板</h2>
 <figure><img src="screenshots/page-clipboard.png" alt="剪贴板页"></figure>
 <ul>
-<li>自动记录复制过的文字（最多 50 条），<b>点一下</b>就重新复制到剪贴板。</li>
+<li>自动记录复制过的文字和图片（截图也会记录，最多 60 条），<b>点一下</b>就重新放回剪贴板。不想记录图片：设置 › 常规 › 记录剪贴板图片。</li>
 <li>📌 置顶常用内容（清空时保留）；× 删除单条；右上角垃圾桶清空未置顶的记录。</li>
 <li>颜色值（如 <code>#7955b8</code>）会显示色块；顶部可以搜索。</li>
 <li>不想记录：设置 › 常规 › 记录剪贴板。</li>
@@ -271,13 +337,13 @@ npm run tauri build    # 打包安装包</code></pre>
 <h2 id="s-look">设置 › 外观与皮肤</h2>
 <ul>
 <li><b>皮肤</b>：经典黑、奶油、毛玻璃 · 浅 / 深、One Dark Pro、Dracula、Night Owl、GitHub Light、赛博朋克；选「自定义」可以分别调整背景、文字、强调色等六种颜色。</li>
-<li><b>形态</b>：刘海（贴住顶边）或胶囊（悬浮在顶部下方）。</li>
+<li><b>形态</b>：刘海（贴住屏幕边缘）、胶囊（悬浮）或指示条（平时只是一条细线）。</li>
 <li><b>大小</b>与<b>背景不透明度</b>。</li>
 </ul>
 
 <h2 id="s-compact">设置 › 收起内容</h2>
 <ul>
-<li>拖动 ⋮⋮ 调整顺序，打开开关显示在收起的小岛上。可选：消息提醒、专辑封面、AI 额度环、CPU 核心柱、CPU / 内存 / GPU 表盘、网速、歌词 / 歌名、律动条、时间、天气、专注倒计时、待办进度。</li>
+<li>拖动 ⋮⋮ 调整顺序，打开开关显示在收起的小岛上。可选：消息提醒、文件中转数量、下一个日程、饮水进度、设备电量、专辑封面、AI 额度环、CPU 核心柱、CPU / 内存 / GPU 表盘、网速、歌词 / 歌名、律动条、时间、天气、专注倒计时、待办进度。</li>
 <li><b>额度环</b>：单环显示用得最多的一项；多环最多显示三项（从外到内）。额度环只显示在「AI 额度」设置中勾选了「收起时显示环」的工具。</li>
 <li><b>显示剩余额度</b>、<b>额度提醒</b>（70% / 90% 时提示）、<b>自适应宽度</b>。</li>
 </ul>
@@ -292,6 +358,10 @@ npm run tauri build    # 打包安装包</code></pre>
 <tbody>
 <tr><td>Claude</td><td>在本机用 <code>claude</code> 命令登录过 Claude Code（Pro / Max / Team 账户）</td></tr>
 <tr><td>Codex</td><td>在本机运行过 Codex CLI</td></tr>
+<tr><td>Cursor（实验性）</td><td>在本机登录 Cursor 即可，不需要填写</td></tr>
+<tr><td>Antigravity（实验性）</td><td>Antigravity 桌面版需要正在运行</td></tr>
+<tr><td>智谱 GLM / Z.ai</td><td>GLM Coding Plan 的 API Key</td></tr>
+<tr><td>Kimi Code</td><td>Kimi Code 控制台创建的 API Key（<code>sk-kimi-</code> 开头）</td></tr>
 <tr><td>DeepSeek</td><td>在 DeepSeek 开放平台创建的 API Key</td></tr>
 <tr><td>OpenRouter</td><td>OpenRouter API Key（<code>sk-or-v1-</code> 开头）</td></tr>
 <tr><td>Kimi（Moonshot 开放平台）</td><td>Moonshot 开放平台的 API Key，国内版和国际版都可以</td></tr>
@@ -300,6 +370,20 @@ npm run tauri build    # 打包安装包</code></pre>
 </tbody>
 </table>
 <p>API Key 填好后按 Enter 或点「保存」，会存入系统钥匙串（macOS）/ 凭据管理器（Windows），输入框不会再显示原值；点「删除」可移除。</p>
+
+<h2 id="s-status">系统状态提示</h2>
+<p>以下变化会在收起的小岛上短暂显示，可以在 设置 › 常规 › 系统状态提示 中逐项关闭：</p>
+<ul>
+<li><b>音量</b>：调节音量或静音时显示音量条。</li>
+<li><b>大写锁定</b>：开启 / 关闭时提示。</li>
+<li><b>输入法</b>：切换输入法时显示名称；<span class="tag win">Windows</span> 中文输入法还会显示「中 / 英」状态。</li>
+<li><b>网络</b>：断网与恢复时提示。</li>
+<li><b>电源</b>：接通 / 断开电源、电量降到 20% 和 10% 时提示。</li>
+<li><b>设备</b>：无线设备电量低时提示。</li>
+</ul>
+
+<h2 id="update">自动更新</h2>
+<p>NotchDeck 启动 30 秒后和之后每天检查一次新版本，有新版本时在小岛上提示。到 设置 › 关于与更新 点「下载并安装」，完成后点「重启以完成更新」。也可以随时点「立即检查」，或关闭自动检查。</p>
 
 <h2 id="faq">常见问题</h2>
 
@@ -324,6 +408,15 @@ npm run tauri build    # 打包安装包</code></pre>
 <h3>正在播放没有显示</h3>
 <p><span class="tag mac">macOS</span> 目前支持 Spotify 和 Apple Music，首次需要允许自动化权限（系统设置 › 隐私与安全性 › 自动化）。<span class="tag win">Windows</span> 需要播放器支持系统媒体控制（音量浮窗里能看到歌曲信息即可）。</p>
 
+<h3>翻译提示「请先填写 API Key」或 HTTP 401</h3>
+<p>到 设置 › 翻译 确认服务、接口地址、模型和 API Key 都已填写；火山方舟的「模型」要填推理接入点 ID（<code>ep-</code> 开头）。</p>
+
+<h3>日历显示「账号或密码不对」</h3>
+<p>iCloud 不能用 Apple ID 的登录密码，需要在 appleid.apple.com 生成 App 专用密码。订阅链接以 <code>webcal://</code> 开头也没关系，会自动转换成 https。</p>
+
+<h3>文件拖到小岛上没有反应</h3>
+<p>拖动时要停在小岛上（收起的刘海或展开的面板都可以），小岛展开后再松手。</p>
+
 <h3>快捷键不起作用</h3>
 <p>组合键可能被其他应用占用，设置页的快捷键区域会显示提示；换一个组合即可。</p>
 
@@ -331,8 +424,8 @@ npm run tauri build    # 打包安装包</code></pre>
 <table>
 <thead><tr><th>内容</th><th>位置</th></tr></thead>
 <tbody>
-<tr><td>设置、待办、剪贴板历史、天气缓存</td><td><span class="tag mac">macOS</span> <code>~/Library/Application Support/NotchDeck</code><br><span class="tag win">Windows</span> <code>%APPDATA%\NotchDeck</code></td></tr>
-<tr><td>API Key</td><td>系统钥匙串 / 凭据管理器，服务名 <code>NotchDeck</code></td></tr>
+<tr><td>设置、待办、笔记、本机日程、饮水记录、文件中转列表、剪贴板历史（图片在 <code>clips</code> 子目录）、天气缓存</td><td><span class="tag mac">macOS</span> <code>~/Library/Application Support/NotchDeck</code><br><span class="tag win">Windows</span> <code>%APPDATA%\NotchDeck</code></td></tr>
+<tr><td>API Key、CalDAV 密码</td><td>系统钥匙串 / 凭据管理器，服务名 <code>NotchDeck</code></td></tr>
 </tbody>
 </table>
 <p><b>卸载</b>：先在设置中关闭「开机自动启动」，然后 <span class="tag mac">macOS</span> 把 NotchDeck 从「应用程序」移到废纸篓；<span class="tag win">Windows</span> 在「设置 › 应用」中卸载。如需同时删除数据，再删除上表中的目录，并在钥匙串 / 凭据管理器中删除 <code>NotchDeck</code> 条目。</p>

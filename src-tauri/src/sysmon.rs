@@ -95,6 +95,11 @@ impl SysMon {
         }
     }
 
+    /// Last battery reading from the slow thread (doesn't touch CPU sampling).
+    pub fn battery(&self) -> Option<Battery> {
+        self.slow.lock().unwrap().1.clone()
+    }
+
     /// Top processes grouped by name (helpers of one app are summed).
     pub fn processes(&mut self, by_mem: bool, n: usize) -> Vec<Proc> {
         self.sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::new().with_cpu().with_memory());
@@ -148,7 +153,7 @@ fn spawn_slow_thread(out: Arc<Mutex<(Option<f32>, Option<Battery>)>>) {
         let mut tick = 0u32;
         let mut bat = None;
         loop {
-            if tick % 15 == 0 {
+            if tick.is_multiple_of(15) {
                 bat = battery();
             }
             tick += 1;

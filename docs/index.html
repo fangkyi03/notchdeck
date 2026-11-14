@@ -120,7 +120,7 @@ footer a { color: var(--muted); }
   <div class="wrap">
     <span class="pill-tag"><b>开源免费</b> macOS · Windows · Tauri 2</span>
     <h1>屏幕顶部的<br><span>一座小岛</span></h1>
-    <p class="lead">AI 编程额度、消息提醒、音乐歌词、系统监控、待办与番茄钟。平时收起，鼠标移上去就展开，移开就收起。</p>
+    <p class="lead">AI 编程额度、消息提醒、文件中转、快捷翻译、日程、音乐歌词、系统监控、待办与番茄钟。平时收起，鼠标移上去就展开，移开就收起。</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/fangkyi03/notchdeck/releases/latest">下载最新版</a>
       <a class="btn ghost" href="guide.html">使用说明</a>
@@ -155,10 +155,12 @@ footer a { color: var(--muted); }
         <h2>拖到哪，就停在哪</h2>
         <ul class="ticks">
           <li><b>沿顶边移动</b>，拖离顶边变成悬浮胶囊，拖回去自动吸附。</li>
-          <li><b>拖到左右边缘</b>，自动变成竖向胶囊，面板从侧边展开。</li>
+          <li><b>拖到左右边缘</b>，自动变成竖向胶囊，面板从侧边展开；拖到<b>底边</b>则贴底、向上展开。</li>
+          <li><b>三种形态</b>：刘海、胶囊，以及平时只是一条细线的指示条。</li>
           <li><b>多显示器</b>，直接拖到另一块屏幕；分辨率、缩放不同也能对齐。</li>
           <li><b>闲置贴边隐藏</b>，不用时缩成一条细线。</li>
           <li><b>全屏自动隐藏</b>，以及只能用快捷键打开的游戏模式。</li>
+          <li><b>系统状态提示</b>：音量、大写锁定、输入法、网络、充电变化时在岛上显示。</li>
         </ul>
       </div>
     </div>
@@ -166,17 +168,22 @@ footer a { color: var(--muted); }
 
   <section>
     <div class="kicker">展开后</div>
-    <h2>九个页面，左右一滑就到</h2>
+    <h2>十四个页面，左右一滑就到</h2>
     <p class="sub">左右箭头、滚轮或键盘切换；页面可以开关和排序，面板边缘拖一拖就能调整大小。</p>
     <div class="grid">
       <div class="card"><img src="screenshots/page-ai.png" alt="AI 额度页"><h3>AI 额度</h3><p>Claude、Codex 的 5 小时与每周额度、重置倒计时；DeepSeek、OpenRouter、Kimi 余额；今日与七日 Token、费用估算。</p></div>
       <div class="card"><img src="screenshots/page-details.png" alt="模型明细页"><h3>模型明细</h3><p>按工具和模型拆开看今天、最近七天各花了多少。</p></div>
       <div class="card"><img src="screenshots/page-messages.png" alt="消息提醒页"><h3>消息提醒</h3><p>微信、QQ、企业微信、钉钉、飞书有新消息时出现在岛上，点一下切过去。</p></div>
+      <div class="card"><img src="screenshots/page-shelf.png" alt="文件中转页"><h3>文件中转</h3><p>把文件拖到岛上暂存，之后打开、复制，或再拖进别的应用。只记录位置，不复制文件。</p></div>
+      <div class="card"><img src="screenshots/page-translate.png" alt="快捷翻译页"><h3>快捷翻译</h3><p>一个快捷键翻译剪贴板内容，支持 DeepSeek、Kimi、通义、OpenAI 等任意兼容接口。</p></div>
+      <div class="card"><img src="screenshots/page-calendar.png" alt="日程页"><h3>日程</h3><p>订阅 iCloud、Google、飞书、钉钉日历或连接 CalDAV，会议开始前在岛上提醒。</p></div>
+      <div class="card"><img src="screenshots/page-water.png" alt="饮水提醒页"><h3>饮水提醒</h3><p>设好目标和间隔，到点提醒，一键记一口。</p></div>
+      <div class="card"><img src="screenshots/page-devices.png" alt="设备电量页"><h3>设备电量</h3><p>鼠标、键盘、耳机、手柄的电量一屏看完，电量低时提醒。</p></div>
       <div class="card"><img src="screenshots/page-music.png" alt="音乐页"><h3>音乐与歌词</h3><p>封面、进度、播放控制和同步歌词；收起时也能只留一句歌词。</p></div>
       <div class="card"><img src="screenshots/page-monitor.png" alt="系统监控页"><h3>系统监控</h3><p>CPU 每核心、GPU、内存、网速曲线、硬盘、电池，以及占用最高的应用。</p></div>
-      <div class="card"><img src="screenshots/page-todo.png" alt="待办页"><h3>待办</h3><p>今天的任务和完成进度，未完成的自动顺延到第二天。</p></div>
+      <div class="card"><img src="screenshots/page-todo.png" alt="待办页"><h3>待办与笔记</h3><p>今天、日历、历史、笔记四个视图，任务可以安排到以后某天，未完成的自动顺延。</p></div>
       <div class="card"><img src="screenshots/page-focus.png" alt="番茄专注页"><h3>番茄专注</h3><p>专注与休息交替，收起时显示倒计时，结束时在岛上提醒。</p></div>
-      <div class="card"><img src="screenshots/page-clipboard.png" alt="剪贴板页"><h3>剪贴板</h3><p>最近复制的文字，点一下重新复制，常用的可以置顶。</p></div>
+      <div class="card"><img src="screenshots/page-clipboard.png" alt="剪贴板页"><h3>剪贴板</h3><p>最近复制的文字和图片，点一下放回剪贴板，常用的可以置顶。</p></div>
       <div class="card"><img src="screenshots/page-weather.png" alt="天气页"><h3>天气</h3><p>实况与未来四天预报，自动定位或手动填城市。</p></div>
     </div>
   </section>
@@ -192,6 +199,9 @@ footer a { color: var(--muted); }
         <tr><td>正在播放</td><td>Spotify、Apple Music</td><td>系统媒体会话：网易云、QQ 音乐、酷狗、Spotify、浏览器等</td></tr>
         <tr><td>GPU 占用</td><td>IOAccelerator</td><td>PDH 性能计数器</td></tr>
         <tr><td>全屏隐藏</td><td>不进入全屏应用的空间</td><td>检测前台全屏窗口</td></tr>
+        <tr><td>设备电量</td><td>Apple 键鼠、AirPods 等向系统报告电量的设备</td><td>蓝牙设备电量属性</td></tr>
+        <tr><td>输入法 / 大写锁定</td><td>TIS 输入源 / CoreGraphics</td><td>键盘布局与输入法中英状态</td></tr>
+        <tr><td>音量提示</td><td>系统音量设置</td><td>Core Audio</td></tr>
         <tr><td>系统代理</td><td>系统网络设置</td><td>Internet 设置</td></tr>
         <tr><td>密钥存储</td><td>钥匙串</td><td>凭据管理器</td></tr>
       </table>
@@ -219,7 +229,8 @@ footer a { color: var(--muted); }
           <li><b>不读聊天内容</b>：只看未读数、任务栏闪烁，以及你允许的系统通知。</li>
           <li><b>密钥进钥匙串</b>：API Key 存在系统钥匙串 / 凭据管理器，不写进配置文件。</li>
           <li><b>不改你的登录</b>：Claude 令牌只在内存里用来读额度，不续期、不写盘。</li>
-          <li><b>联网只为必要的事</b>：额度、歌词（LRCLIB）、天气（Open-Meteo）。</li>
+          <li><b>联网只为必要的事</b>：额度、歌词（LRCLIB）、天气（Open-Meteo）、你添加的日历和翻译服务、检查更新。</li>
+          <li><b>自动更新</b>：新版本经签名校验后一键安装。</li>
         </ul>
       </div>
       <div class="card"><img src="screenshots/settings.png" alt="设置窗口"></div>

@@ -16,6 +16,7 @@ export const api = {
   clips: () => invoke<ClipItem[]>("clip_list"),
   clipCopy: (text: string) => invoke<void>("clip_copy", { text }),
   clipUpdate: (index: number, action: "pin" | "delete") => invoke<void>("clip_update", { index, action }),
+  clipRestore: (index: number) => invoke<void>("clip_restore", { index }),
   clipClear: () => invoke<void>("clip_clear"),
   place: (width: number, height: number, x: number, y: number, dock: Dock = "top") => invoke<[number, number]>("place_island", { width, height, x, y, dock }),
   drag: (hw: number, hh: number, vw: number, vh: number, grabX: number, grabY: number, minY: number) => invoke<{ monitor: string; dock: Dock; x: number; y: number }>("drag_island", { hw, hh, vw, vh, grabX, grabY, minY }),

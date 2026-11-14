@@ -9,6 +9,11 @@ import { Compact } from "./Compact";
 import { useData } from "./data";
 import { AiPage } from "./pages/Ai";
 import { MessagesPage } from "./pages/Messages";
+import { ShelfPage } from "./pages/Shelf";
+import { TranslatePage } from "./pages/Translate";
+import { CalendarPage, WaterPage } from "./pages/Calendar";
+import { DevicesPage } from "./pages/Devices";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { DetailsPage } from "./pages/Details";
 import { ClipboardPage, FocusPage, TodoPage, WeatherPage } from "./pages/Daily";
 import { MonitorPage } from "./pages/Monitor";
@@ -21,7 +26,7 @@ const CAPSULE_GAP = 8;
 const COLLAPSE_MS = 280;
 
 const PAGES: Record<PageId, () => JSX.Element | null> = {
-  messages: MessagesPage, ai: AiPage, details: DetailsPage, music: MusicPage, monitor: MonitorPage, todo: TodoPage, focus: FocusPage, clipboard: ClipboardPage, weather: WeatherPage,
+  devices: DevicesPage, calendar: CalendarPage, water: WaterPage, translate: TranslatePage, shelf: ShelfPage, messages: MessagesPage, ai: AiPage, details: DetailsPage, music: MusicPage, monitor: MonitorPage, todo: TodoPage, focus: FocusPage, clipboard: ClipboardPage, weather: WeatherPage,
 };
 
 export function Island() {
@@ -50,16 +55,19 @@ export function Island() {
 
   /* ---------------- geometry ---------------- */
   const dock: Dock = pos.dock ?? "top";
-  const side = dock !== "top";
-  const floating = !side && (cfg.shape === "capsule" || pos.y > 0);
-  const y = side ? pos.y : cfg.shape === "capsule" ? Math.max(pos.y, CAPSULE_GAP) : pos.y;
-  const shoulder = side || floating ? 0 : SHOULDER;
+  const side = dock === "left" || dock === "right";
+  const bottom = dock === "bottom";
+  const floating = !side && !bottom && (cfg.shape === "capsule" || pos.y > 0);
+  const y = side || bottom ? pos.y : cfg.shape === "capsule" ? Math.max(pos.y, CAPSULE_GAP) : pos.y;
+  const shoulder = side || bottom || floating ? 0 : SHOULDER;
+  // Indicator-bar shape: always just a thin line while collapsed.
+  const lineMode = cfg.shape === "line";
   const s = cfg.scale;
   const horiz = { w: cfg.compact.autoWidth ? Math.max(120, compactW) : cfg.compact.width, h: PILL_H };
   const vert = { w: SIDE_W, h: Math.max(80, compactH) };
   // Idle-tucked: a thin line along the edge; hovering it brings the island back.
   const line = side ? { w: 6, h: Math.max(60, vert.h * 0.6) } : { w: Math.max(90, horiz.w * 0.5), h: 6 };
-  const collapsed = tucked ? line : side ? vert : horiz;
+  const collapsed = tucked || lineMode ? line : side ? vert : horiz;
   const body = expanded ? { w: panel.width, h: panel.height } : collapsed;
 
   const winSize = useCallback((b: { w: number; h: number }) => ({ w: (b.w + shoulder * 2) * s, h: b.h * s }), [shoulder, s]);
@@ -136,7 +144,26 @@ export function Island() {
     }, 1000);
     return () => clearInterval(id);
   }, [cfg.idleHide]);
-  useEffect(() => { if (d.alert) { lastActive.current = Date.now(); setTucked(false); } }, [d.alert]);
+  useEffect(() => { if (d.alert || d.hud) { lastActive.current = Date.now(); setTucked(false); } }, [d.alert, d.hud]);
+
+  // Files dragged onto the island: open the shelf while hovering, store on drop.
+  const [dropping, setDropping] = useState(false);
+  useEffect(() => {
+    const un = getCurrentWebviewWindow().onDragDropEvent((e) => {
+      const p = e.payload;
+      if (p.type === "enter") {
+        setDropping(true);
+        setPage("shelf"); localStorage.setItem("page", "shelf");
+        expand();
+      } else if (p.type === "drop") {
+        setDropping(false);
+        if (p.paths.length) { d.addToShelf(p.paths); d.pushAlert(`已暂存 ${p.paths.length} 个文件`); }
+      } else if (p.type === "leave") {
+        setDropping(false);
+      }
+    });
+    return () => { un.then((f) => f()); };
+  }, [expand, d.addToShelf, d.pushAlert]);
 
   // Global shortcuts (registered by the Rust side).
   useEffect(() => {
@@ -144,10 +171,15 @@ export function Island() {
       const open = (p?: PageId) => { if (p) { setPage(p); localStorage.setItem("page", p); } expand(); };
       if (payload === "toggle") (expandedRef.current ? collapse() : open());
       else if (payload === "clipboard") open("clipboard");
+      else if (payload === "translate") {
+        // Translate whatever is on the clipboard right now.
+        api.clips().then((c) => { const t = c.find((x) => x.kind !== "image")?.text; if (t) d.seedTranslate(t); });
+        open("translate");
+      }
       else if (payload === "todo") open("todo");
     });
     return () => { un.then((f) => f()); };
-  }, [expand, collapse]);
+  }, [expand, collapse, d.seedTranslate]);
 
   useEffect(() => {
     const un = listen<[boolean, number, number]>("island-cursor", ({ payload: [inside] }) => {
@@ -163,7 +195,7 @@ export function Island() {
       } else {
         clearTimeout(timers.current.open);
         timers.current.open = undefined;
-        const typing = document.activeElement instanceof HTMLInputElement && document.hasFocus();
+        const typing = (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) && document.hasFocus();
         if (expandedRef.current && !typing) {
           clearTimeout(timers.current.close);
           timers.current.close = window.setTimeout(collapse, 220);
@@ -176,7 +208,7 @@ export function Island() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") { (document.activeElement as HTMLElement)?.blur(); collapse(); }
-      if (!expandedRef.current || document.activeElement instanceof HTMLInputElement) return;
+      if (!expandedRef.current || (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)) return;
       if (e.key === "ArrowRight") go(1);
       if (e.key === "ArrowLeft") go(-1);
     };
@@ -276,12 +308,13 @@ export function Island() {
   const radius = expanded ? 26 : floating ? PILL_H / 2 : side ? SIDE_W / 2 : 14;
   const borderRadius = side
     ? dock === "left" ? `0 ${radius}px ${radius}px 0` : `${radius}px 0 0 ${radius}px`
+    : bottom ? `${radius}px ${radius}px 0 0`
     : floating ? `${radius}px` : `0 0 ${radius}px ${radius}px`;
 
   return (
     <div className="stage" style={{ zoom: s }}>
       <div
-        className={`body ${tucked && !expanded ? "tucked" : ""} ${expanded ? "expanded" : "collapsed"} ${floating ? "floating" : "docked"} dock-${dock}`}
+        className={`body ${dropping ? "dropping" : ""} ${(tucked || lineMode) && !expanded ? "tucked" : ""} ${lineMode ? "line-shape" : ""} ${expanded ? "expanded" : "collapsed"} ${floating ? "floating" : "docked"} dock-${dock}`}
         style={{ width: body.w, height: body.h, borderRadius, ["--alpha" as string]: `${Math.round(cfg.opacity * 100)}%` }}
         onPointerDown={!expanded ? onDragStart : undefined}
         onWheel={expanded ? onWheel : undefined}
@@ -293,8 +326,8 @@ export function Island() {
             <div className="p-title">{meta.title[0]}<em>{meta.title[1]}</em></div>
             <div className="p-clock"><span>{fmtDate(now)}</span><b>{fmtClock(now, cfg.clock24)}</b></div>
             <div className="p-actions">
-              {(curPage === "ai" || curPage === "details" || curPage === "weather") && (
-                <button className="icon-btn" title="刷新" onClick={() => (curPage !== "weather" ? d.refreshUsage() : d.refreshWeather())}><Icon name="refresh" size={15} /></button>
+              {(curPage === "ai" || curPage === "details" || curPage === "weather" || curPage === "calendar") && (
+                <button className="icon-btn" title="刷新" onClick={() => (curPage === "calendar" ? d.refreshCalendar() : curPage !== "weather" ? d.refreshUsage() : d.refreshWeather())}><Icon name="refresh" size={15} /></button>
               )}
               <button className="icon-btn" title="设置" onClick={() => api.openSettings()}><Icon name="settings" size={15} /></button>
             </div>

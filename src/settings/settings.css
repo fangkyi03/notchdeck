@@ -53,3 +53,4 @@ h2 { font-size: 18px; margin-bottom: 14px; }
 select { min-width: 220px; }
 .shortcut { width: 200px; text-align: center; cursor: pointer; caret-color: transparent; }
 .problems { background: rgba(255,69,58,.12); color: #ff6b5e; border-radius: 8px; padding: 8px 12px; font-size: 12px; margin-bottom: 8px; }
+.release-notes { white-space: pre-wrap; background: var(--card); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--muted); }

@@ -1,48 +1,105 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { todayKey, weatherInfo } from "../../lib/format";
 import { Icon } from "../../lib/icons";
 import type { Todo } from "../../lib/types";
 import { useData } from "../data";
 import { Rings } from "../widgets";
+import { MonthGrid } from "./Calendar";
 
 /* ------------------------------- todo ------------------------------- */
 
-export function TodoPage() {
+type TodoView = "today" | "calendar" | "history" | "notes";
+
+function TodoList({ date }: { date: string }) {
   const { todos, setTodos } = useData();
   const [text, setText] = useState("");
-  const today = todayKey();
-  const list = todos.filter((t) => t.date === today);
-  const done = list.filter((t) => t.done).length;
-  const update = (id: string, patch: Partial<Todo>) => setTodos(todos.map((t) => (t.id === id ? { ...t, ...patch } : patch.current ? { ...t, current: false } : t)));
+  const [when, setWhen] = useState(date);
+  const list = todos.filter((t) => t.date === date);
+  const update = (id: string, patch: Partial<Todo>) =>
+    setTodos(todos.map((t) => (t.id === id ? { ...t, ...patch } : patch.current ? { ...t, current: false } : t)));
   const add = () => {
     if (!text.trim()) return;
-    setTodos([...todos, { id: Math.random().toString(36).slice(2), text: text.trim(), done: false, date: today }]);
+    setTodos([...todos, { id: Math.random().toString(36).slice(2), text: text.trim(), done: false, date: when || date }]);
     setText("");
   };
   return (
-    <div className="todo">
-      <div className="todo-sum">
-        <Rings values={[list.length ? (done / list.length) * 100 : 0]} color="#30d158" size={64} stroke={6} />
-        <div><span className="big">{done}/{list.length}</span><div className="muted">已完成</div></div>
+    <div className="todo-list">
+      <form className="todo-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <Icon name="plus" size={14} />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={date === todayKey() ? "添加待办，回车保存" : `添加 ${date.slice(5)} 的待办`} />
+        <input className="todo-date" type="date" value={when} min={todayKey()} onChange={(e) => setWhen(e.target.value)} title="安排到哪一天" />
+      </form>
+      <div className="todo-items">
+        {list.map((t) => (
+          <div key={t.id} className={`todo-item ${t.done ? "done" : ""} ${t.current ? "current" : ""}`}>
+            <button className="chk" onClick={() => update(t.id, { done: !t.done, current: false, doneAt: !t.done ? Date.now() : undefined })} aria-label="完成">{t.done ? "✓" : ""}</button>
+            <span className="tt">{t.text}</span>
+            {!t.done && date === todayKey() && <button className={`cur-btn ${t.current ? "on" : ""}`} onClick={() => update(t.id, { current: !t.current })}>{t.current ? "进行中" : "开始"}</button>}
+            <button className="x" onClick={() => setTodos(todos.filter((x) => x.id !== t.id))} aria-label="删除"><Icon name="x" size={12} /></button>
+          </div>
+        ))}
+        {!list.length && <div className="muted pad">{date === todayKey() ? "今天还没有待办" : "这一天没有待办"}</div>}
       </div>
-      <div className="todo-list">
-        <form className="todo-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <Icon name="plus" size={14} />
-          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="添加今天的待办，回车保存" />
-        </form>
-        <div className="todo-items">
-          {list.map((t) => (
-            <div key={t.id} className={`todo-item ${t.done ? "done" : ""} ${t.current ? "current" : ""}`}>
-              <button className="chk" onClick={() => update(t.id, { done: !t.done, current: false })} aria-label="完成">{t.done ? "✓" : ""}</button>
-              <span className="tt" onDoubleClick={() => update(t.id, { current: !t.current })} title="双击设为当前任务">{t.text}</span>
-              {!t.done && <button className={`cur-btn ${t.current ? "on" : ""}`} onClick={() => update(t.id, { current: !t.current })}>{t.current ? "进行中" : "开始"}</button>}
-              <button className="x" onClick={() => setTodos(todos.filter((x) => x.id !== t.id))} aria-label="删除"><Icon name="x" size={12} /></button>
+    </div>
+  );
+}
+
+export function TodoPage() {
+  const { todos, notes, setNote } = useData();
+  const [view, setView] = useState<TodoView>("today");
+  const [month, setMonth] = useState(() => new Date());
+  const [sel, setSel] = useState(todayKey());
+  const today = todayKey();
+  const list = todos.filter((t) => t.date === today);
+  const done = list.filter((t) => t.done).length;
+
+  const marks = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const t of todos) (m[t.date] ??= []).push(t.done ? "#30d158" : "#ff9f0a");
+    for (const k of Object.keys(notes)) (m[k] ??= []).push("#64d2ff");
+    return m;
+  }, [todos, notes]);
+  const history = useMemo(() => {
+    const byDay: Record<string, Todo[]> = {};
+    for (const t of todos) if (t.date < today || (t.date === today && t.done)) (byDay[t.date] ??= []).push(t);
+    return Object.entries(byDay).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  }, [todos, today]);
+
+  return (
+    <div className="todo">
+      <div className="todo-side">
+        <div className="seg todo-tabs">
+          {([["today", "今天"], ["calendar", "日历"], ["history", "历史"], ["notes", "笔记"]] as [TodoView, string][]).map(([v, l]) => (
+            <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{l}</button>
+          ))}
+        </div>
+        {view === "calendar"
+          ? <MonthGrid month={month} setMonth={setMonth} selected={sel} onSelect={setSel} marks={marks} />
+          : <div className="todo-sum">
+              <Rings values={[list.length ? (done / list.length) * 100 : 0]} color="#30d158" size={60} stroke={6} />
+              <div><span className="big">{done}/{list.length}</span><div className="muted">今日完成</div></div>
+            </div>}
+      </div>
+      {view === "today" && <TodoList date={today} />}
+      {view === "calendar" && <TodoList key={sel} date={sel} />}
+      {view === "history" && (
+        <div className="todo-list scroll">
+          {history.map(([day, items]) => (
+            <div key={day} className="hist-day">
+              <div className="hist-head"><b>{day === today ? "今天" : day.slice(5)}</b><span className="muted small">{items.filter((t) => t.done).length}/{items.length} 完成</span></div>
+              {items.map((t) => <div key={t.id} className={`hist-item ${t.done ? "done" : ""}`}>{t.done ? "✓" : "○"} {t.text}</div>)}
             </div>
           ))}
-          {!list.length && <div className="muted pad">今天还没有待办</div>}
+          {!history.length && <div className="muted pad">完成的待办会按日期记录在这里</div>}
         </div>
-      </div>
+      )}
+      {view === "notes" && (
+        <div className="todo-list">
+          <div className="hist-head"><b>{today.slice(5).replace("-", "月")}日 · 笔记</b><span className="muted small">自动保存</span></div>
+          <textarea className="note-area" value={notes[today] ?? ""} placeholder="今天想记下点什么……" onChange={(e) => setNote(today, e.target.value)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -97,13 +154,15 @@ export function ClipboardPage() {
       </div>
       <div className="clip-list">
         {sorted.map((c) => (
-          <div key={c.i} className={`clip-item ${c.pinned ? "pinned" : ""}`} onClick={() => api.clipCopy(c.text).then(() => pushAlert("已复制到剪贴板"))} title="点击复制">
-            <span className="ct">{/^#[0-9a-f]{3,8}$/i.test(c.text.trim()) && <i className="swatch" style={{ background: c.text.trim() }} />}{c.text.trim().slice(0, 200)}</span>
+          <div key={c.i} className={`clip-item ${c.pinned ? "pinned" : ""} ${c.kind === "image" ? "is-image" : ""}`} onClick={() => api.clipRestore(c.i).then(() => pushAlert(c.kind === "image" ? "图片已复制到剪贴板" : "已复制到剪贴板")).catch((e) => pushAlert(String(e)))} title="点击复制">
+            {c.kind === "image"
+              ? <span className="ct"><img className="clip-thumb" src={c.thumb} alt="" draggable={false} /><small className="muted">{c.text}</small></span>
+              : <span className="ct">{/^#[0-9a-f]{3,8}$/i.test(c.text.trim()) && <i className="swatch" style={{ background: c.text.trim() }} />}{c.text.trim().slice(0, 200)}</span>}
             <button className={`icon-btn ${c.pinned ? "on" : ""}`} onClick={(e) => { e.stopPropagation(); act(c.i, "pin"); }} title="置顶"><Icon name="pin" size={13} /></button>
             <button className="icon-btn" onClick={(e) => { e.stopPropagation(); act(c.i, "delete"); }} title="删除"><Icon name="x" size={13} /></button>
           </div>
         ))}
-        {!sorted.length && <div className="muted pad">复制过的文字会出现在这里</div>}
+        {!sorted.length && <div className="muted pad">复制过的文字和图片会出现在这里</div>}
       </div>
     </div>
   );

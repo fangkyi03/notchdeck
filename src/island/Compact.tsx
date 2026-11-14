@@ -5,6 +5,7 @@ import type { Column, CompactItem, Config } from "../lib/types";
 import { useData } from "./data";
 import { CoreBars, Cover, Dial, Eq, Rings } from "./widgets";
 import { AppBadge } from "./pages/Messages";
+import { batteryColor } from "./pages/Devices";
 
 /** Values shown in a provider's ring(s): highest-used quota, or up to 3 in multi mode. */
 export function ringValues(c: Column, cfg: Config): (number | null)[] {
@@ -21,14 +22,38 @@ function metricColor(cfg: Config, id: string) {
 /** The collapsed island content. Rendered as one row; width is measured by the shell. */
 export const Compact = forwardRef<HTMLDivElement, { vertical?: boolean }>(function Compact({ vertical }, ref) {
   const d = useData();
-  const { cfg, sys, media, lyrics, lyricIndex, cols, now, focus, todos, weather, alert } = d;
+  const { cfg, sys, media, lyrics, lyricIndex, cols, now, focus, todos, weather, alert, hud } = d;
 
+  if (hud && !vertical) {
+    return (
+      <div className="compact" ref={ref}>
+        <span className="c-hud"><span className="hud-ic">{hud.icon}</span>{hud.text}
+          {hud.kind === "volume" && hud.value != null && <span className="hud-bar"><i style={{ width: `${hud.value}%` }} /></span>}
+        </span>
+      </div>
+    );
+  }
   if (alert) {
     return <div className={`compact ${vertical ? "vertical" : ""}`} ref={ref}><span className="c-alert">{vertical ? "!" : alert}</span></div>;
   }
 
   const item = (id: CompactItem): ReactNode => {
     switch (id) {
+      case "devices":
+        return d.devices.length ? <span className="c-rings">{d.devices.slice(0, 4).map((x) => (
+          <span key={x.name} title={`${x.name} ${x.percent}%`}><Rings values={[x.percent]} color={batteryColor(x.percent)} size={18} stroke={2.6} /></span>
+        ))}</span> : null;
+      case "event": {
+        const t = now.getTime() / 1000;
+        const e = d.events.find((x) => !x.all_day && x.end > t && x.start - t < 12 * 3600);
+        if (!e) return null;
+        const mins = Math.round((e.start - t) / 60);
+        return <span className="c-event"><i style={{ background: e.color || "var(--accent)" }} />{mins > 0 ? `${mins < 60 ? `${mins}分` : `${Math.floor(mins / 60)}时`}后` : "进行中"} {e.title}</span>;
+      }
+      case "water":
+        return cfg.water.enabled ? <span className="c-water">💧{Math.round((d.water.ml / Math.max(1, cfg.water.goal)) * 100)}%</span> : null;
+      case "shelf":
+        return d.shelf.length ? <span className="c-shelf">📎 {d.shelf.length}</span> : null;
       case "msg": {
         const apps = d.messages.apps;
         if (!apps.length) return null;

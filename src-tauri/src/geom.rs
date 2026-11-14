@@ -120,6 +120,7 @@ pub fn set_rect(win: &WebviewWindow, mon: &Mon, gx: f64, gy: f64, lw: f64, lh: f
 #[serde(rename_all = "lowercase")]
 pub enum Dock {
     Top,
+    Bottom,
     Left,
     Right,
 }
@@ -129,6 +130,7 @@ impl Dock {
         match s {
             "left" => Dock::Left,
             "right" => Dock::Right,
+            "bottom" => Dock::Bottom,
             _ => Dock::Top,
         }
     }
@@ -141,12 +143,12 @@ impl Dock {
 pub fn place(win: &WebviewWindow, mon: &Mon, dock: Dock, lw: f64, lh: f64, x: f64, y: f64) -> Result<(f64, f64), String> {
     let (mw, mh) = (mon.lw(), mon.lh());
     match dock {
-        Dock::Top => {
+        Dock::Top | Dock::Bottom => {
             let max_x = ((mw - lw) / 2.0).max(0.0);
             let x = x.clamp(-max_x, max_x);
-            let y = y.clamp(0.0, (mh - lh).max(0.0));
+            let y = if dock == Dock::Bottom { 0.0 } else { y.clamp(0.0, (mh - lh).max(0.0)) };
             let gx = mon.x + ((mw - lw) / 2.0 + x) * mon.unit;
-            let gy = mon.y + y * mon.unit;
+            let gy = if dock == Dock::Bottom { mon.y + (mh - lh) * mon.unit } else { mon.y + y * mon.unit };
             set_rect(win, mon, gx, gy, lw, lh)?;
             Ok((x, y))
         }
@@ -193,7 +195,15 @@ pub fn drag(win: &WebviewWindow, h: (f64, f64), v: (f64, f64), grab: (f64, f64),
     let lx = (cx - mon.x) / mon.unit;
     let ly = (cy - mon.y) / mon.unit;
     let (mw, mh) = (mon.lw(), mon.lh());
-    let dock = if lx < SIDE_SNAP { Dock::Left } else if lx > mw - SIDE_SNAP { Dock::Right } else { Dock::Top };
+    let dock = if lx < SIDE_SNAP {
+        Dock::Left
+    } else if lx > mw - SIDE_SNAP {
+        Dock::Right
+    } else if ly > mh - SIDE_SNAP {
+        Dock::Bottom
+    } else {
+        Dock::Top
+    };
     let (x, y) = match dock {
         Dock::Top => {
             let mut y = (ly - grab.1).max(0.0);
@@ -203,6 +213,7 @@ pub fn drag(win: &WebviewWindow, h: (f64, f64), v: (f64, f64), grab: (f64, f64),
             let (x, _) = place(win, &mon, dock, h.0, h.1, lx - grab.0 - mw / 2.0, y.max(min_y))?;
             (x, y)
         }
+        Dock::Bottom => place(win, &mon, dock, h.0, h.1, lx - grab.0 - mw / 2.0, 0.0)?,
         _ => place(win, &mon, dock, v.0, v.1, 0.0, ly - mh / 2.0)?,
     };
     Ok(DragResult { monitor: mon.key, dock, x, y })

@@ -1,8 +1,12 @@
+mod calendar;
 mod config;
+mod devices;
 mod extras;
 mod geom;
 mod net;
 mod runtime;
+mod shelf;
+mod translate;
 mod fullscreen;
 mod media;
 mod messages;
@@ -16,14 +20,12 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
-struct AppState {
-    config: Mutex<Value>,
-    sys: Mutex<sysmon::SysMon>,
+pub(crate) struct AppState {
+    pub(crate) config: Mutex<Value>,
+    pub(crate) sys: Mutex<sysmon::SysMon>,
 }
 
-fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> impl std::future::Future<Output = Result<T, String>> {
-    async move { tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string()) }
-}
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> Result<T, String> { tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string()) }
 
 /* ------------------------------ config ------------------------------ */
 
@@ -109,6 +111,11 @@ fn clip_update(index: usize, action: String) {
 }
 
 #[tauri::command]
+async fn clip_restore(index: usize) -> Result<(), String> {
+    blocking(move || extras::clip_restore(index)).await?
+}
+
+#[tauri::command]
 fn clip_clear() {
     extras::clip_clear()
 }
@@ -121,6 +128,49 @@ fn secret_set(id: String, value: String) -> Result<(), String> {
 #[tauri::command]
 fn secret_has(id: String) -> bool {
     usage::secret_get(&id).is_some()
+}
+
+#[tauri::command]
+fn shelf_info(paths: Vec<String>) -> Vec<shelf::FileInfo> {
+    shelf::info(&paths)
+}
+
+#[tauri::command]
+async fn shelf_action(action: String, paths: Vec<String>) -> Result<(), String> {
+    blocking(move || match action.as_str() {
+        "open" => paths.first().map(|p| shelf::open(p)).unwrap_or(Ok(())),
+        "reveal" => paths.first().map(|p| shelf::reveal(p)).unwrap_or(Ok(())),
+        "copy" => shelf::copy_files(&paths),
+        _ => Err("unknown action".into()),
+    })
+    .await?
+}
+
+#[tauri::command]
+async fn translate_text(state: State<'_, AppState>, text: String, target: String) -> Result<String, String> {
+    let cfg = state.config.lock().unwrap().clone();
+    blocking(move || translate::translate(&cfg, &text, &target)).await?
+}
+
+#[tauri::command]
+async fn calendar_events(state: State<'_, AppState>, force: Option<bool>) -> Result<calendar::CalResult, String> {
+    let cfg = state.config.lock().unwrap().clone();
+    blocking(move || calendar::events(&cfg, force.unwrap_or(false))).await
+}
+
+#[tauri::command]
+fn calendar_import(text: String) -> Vec<calendar::Event> {
+    calendar::import(&text)
+}
+
+#[tauri::command]
+fn get_devices() -> Vec<devices::Device> {
+    devices::devices()
+}
+
+#[tauri::command]
+fn drag_icon() -> String {
+    shelf::drag_icon()
 }
 
 #[tauri::command]
@@ -252,7 +302,7 @@ fn spawn_watchers(app: AppHandle) {
             tick = tick.wrapping_add(1);
             let Some(win) = app.get_webview_window("main") else { continue };
 
-            if tick % 12 == 0 {
+            if tick.is_multiple_of(12) {
                 let hide_fs = app.state::<AppState>().config.lock().unwrap().get("hideOnFullscreen").and_then(|v| v.as_bool()).unwrap_or(true);
                 let fs = hide_fs && fullscreen::foreground_is_fullscreen(own_hwnd(&win));
                 if fs != hidden {
@@ -286,11 +336,15 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(runtime::shortcut_plugin())
+        .plugin(tauri_plugin_drag::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(AppState { config: Mutex::new(config::load()), sys: Mutex::new(sysmon::SysMon::new()) })
         .invoke_handler(tauri::generate_handler![
             get_config, save_config, store_get, store_set, get_sys, get_procs, get_usage, get_media, media_control, get_lyrics,
-            get_weather, clip_list, clip_copy, clip_update, clip_clear, place_island, drag_island, list_monitors, show_island, open_settings,
-            secret_set, secret_has, get_messages, open_message_app, set_click_through
+            get_weather, clip_list, clip_copy, clip_restore, clip_update, clip_clear, place_island, drag_island, list_monitors, show_island, open_settings,
+            secret_set, secret_has, get_messages, open_message_app, set_click_through,
+            shelf_info, shelf_action, drag_icon, translate_text, calendar_events, calendar_import, get_devices
         ])
         .setup(|app| {
             net::set_override(app.state::<AppState>().config.lock().unwrap().get("proxy").and_then(|v| v.as_str()).unwrap_or(""));
@@ -315,10 +369,17 @@ pub fn run() {
 
             let h = app.handle().clone();
             extras::spawn_clipboard_watcher(app.handle().clone(), move || {
-                h.state::<AppState>().config.lock().unwrap().get("clipboard").and_then(|v| v.as_bool()).unwrap_or(true)
+                let state = h.state::<AppState>();
+                let c = state.config.lock().unwrap();
+                let flags = (
+                    c.get("clipboard").and_then(|v| v.as_bool()).unwrap_or(true),
+                    c.get("clipboardImages").and_then(|v| v.as_bool()).unwrap_or(true),
+                );
+                flags
             });
             spawn_watchers(app.handle().clone());
             messages::spawn(app.handle().clone());
+            devices::spawn(app.handle().clone());
             let cfg = app.state::<AppState>().config.lock().unwrap().clone();
             for p in runtime::apply(app.handle(), &cfg) {
                 eprintln!("[notchdeck] {p}");

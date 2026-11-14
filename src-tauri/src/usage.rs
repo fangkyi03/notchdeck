@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Local, TimeZone, Utc};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -67,6 +67,11 @@ pub fn fetch_all(cfg: &Value, force: bool) -> Vec<Column> {
                 "deepseek" => custom(&mut col, deepseek(&s("id"))),
                 "openrouter" => custom(&mut col, openrouter(&s("id"))),
                 "moonshot" => custom(&mut col, moonshot(&s("id"))),
+                "cursor" => custom(&mut col, cursor()),
+                "glm" => custom(&mut col, glm(&s("id"), "https://open.bigmodel.cn")),
+                "zai" => custom(&mut col, glm(&s("id"), "https://api.z.ai")),
+                "kimi_code" => custom(&mut col, kimi_code(&s("id"))),
+                "antigravity" => custom(&mut col, antigravity()),
                 k => col.error = Some(format!("未知类型 {k}")),
             }
             col
@@ -639,4 +644,282 @@ fn moonshot(id: &str) -> Custom {
         q.push(Quota { title: "代金券".into(), value: format!("¥{v:.2}"), ..Default::default() });
     }
     Ok((String::new(), q))
+}
+
+/* ------------------------------- Cursor ------------------------------- */
+
+fn cursor_db() -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    let base = home().join("Library/Application Support/Cursor");
+    #[cfg(windows)]
+    let base = dirs::config_dir()?.join("Cursor");
+    #[cfg(not(any(target_os = "macos", windows)))]
+    let base = home().join(".config/Cursor");
+    let p = base.join("User/globalStorage/state.vscdb");
+    p.exists().then_some(p)
+}
+
+/// Finds the value stored right after `key` in Cursor's SQLite key/value DB without
+/// a SQLite dependency: rows keep key and value adjacent, so scan the raw pages.
+fn scan_after(bytes: &[u8], key: &str, accept: impl Fn(u8) -> bool, min_len: usize) -> Option<String> {
+    let k = key.as_bytes();
+    let mut i = 0;
+    while let Some(pos) = bytes[i..].windows(k.len()).position(|w| w == k) {
+        let start = i + pos + k.len();
+        let window = &bytes[start..(start + 4096).min(bytes.len())];
+        // Skip non-matching bytes, then take the longest accepted run.
+        let mut j = 0;
+        while j < window.len() {
+            if accept(window[j]) {
+                let run: Vec<u8> = window[j..].iter().take_while(|b| accept(**b)).copied().collect();
+                if run.len() >= min_len {
+                    return String::from_utf8(run).ok();
+                }
+                j += run.len().max(1);
+            } else {
+                j += 1;
+            }
+        }
+        i = start;
+    }
+    None
+}
+
+fn jwt_sub(jwt: &str) -> Option<String> {
+    use base64::Engine;
+    let payload = jwt.split('.').nth(1)?;
+    let raw = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(payload.trim_end_matches('=')).ok()?;
+    let v: Value = serde_json::from_slice(&raw).ok()?;
+    v.get("sub").and_then(|x| x.as_str()).map(String::from)
+}
+
+fn cursor() -> Custom {
+    let db = cursor_db().ok_or("未找到 Cursor（请先在本机登录 Cursor）")?;
+    let bytes = std::fs::read(&db).map_err(|e| e.to_string())?;
+    let jwt_char = |b: u8| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.';
+    let token = scan_after(&bytes, "cursorAuth/accessToken", jwt_char, 100).filter(|t| t.starts_with("eyJ")).ok_or("未找到 Cursor 登录")?;
+    let plan = scan_after(&bytes, "cursorAuth/stripeMembershipType", |b| b.is_ascii_lowercase() || b == b'_', 3).unwrap_or_default();
+    let sub = jwt_sub(&token).ok_or("Cursor 登录格式不对")?;
+    let user = sub.rsplit('|').next().unwrap_or(&sub).to_string();
+    let cookie = format!("WorkosCursorSessionToken={user}%3A%3A{token}");
+
+    // Current plans: monthly included usage in cents.
+    if let Ok(r) = crate::net::get("https://cursor.com/api/usage-summary").set("Cookie", &cookie).set("Origin", "https://cursor.com").call() {
+        if let Ok(v) = r.into_json::<Value>() {
+            let reset = v.get("billingCycleEnd").and_then(|x| x.as_str()).and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map(|t| t.timestamp());
+            let plan_name = v.get("membershipType").and_then(|x| x.as_str()).map(plan_label).unwrap_or_else(|| plan_label(&plan));
+            let mut q = vec![];
+            if let Some(p) = v.pointer("/individualUsage/plan") {
+                let (used, limit) = (num(p.get("used")).unwrap_or(0.0), num(p.get("limit")).unwrap_or(0.0));
+                if limit > 0.0 {
+                    q.push(Quota { title: "本月额度".into(), percent: Some(used / limit * 100.0), value: format!("${:.2} / ${:.0}", used / 100.0, limit / 100.0), reset_at: reset, ..Default::default() });
+                }
+            }
+            if let Some(p) = v.pointer("/individualUsage/onDemand").filter(|p| p.get("enabled").and_then(|x| x.as_bool()) == Some(true)) {
+                let (used, limit) = (num(p.get("used")).unwrap_or(0.0), num(p.get("limit")).unwrap_or(0.0));
+                q.push(Quota { title: "按量计费".into(), percent: (limit > 0.0).then(|| used / limit * 100.0), value: format!("${:.2}", used / 100.0), reset_at: reset, ..Default::default() });
+            }
+            if !q.is_empty() {
+                return Ok((plan_name, q));
+            }
+        }
+    }
+    // Older request-based plans.
+    let v: Value = crate::net::get(&format!("https://cursor.com/api/usage?user={user}")).set("Cookie", &cookie).call().map_err(http_error)?.into_json().map_err(|_| "返回格式不对".to_string())?;
+    let mut q = vec![];
+    let reset = v.get("startOfMonth").and_then(|x| x.as_str()).and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map(|t| (t + chrono::Months::new(1)).timestamp());
+    for (k, title) in [("gpt-4", "高级请求"), ("gpt-3.5-turbo", "普通请求")] {
+        if let Some(m) = v.get(k) {
+            let used = num(m.get("numRequests")).unwrap_or(0.0);
+            let max = num(m.get("maxRequestUsage"));
+            q.push(Quota { title: title.into(), percent: max.filter(|x| *x > 0.0).map(|x| used / x * 100.0), value: format!("{used:.0} 次"), reset_at: reset, ..Default::default() });
+        }
+    }
+    if q.is_empty() {
+        return Err("没有读到 Cursor 额度".into());
+    }
+    Ok((plan_label(&plan), q))
+}
+
+/* ---------------------------- 智谱 GLM / Z.ai ---------------------------- */
+
+fn glm(id: &str, host: &str) -> Custom {
+    let key = need_key(id)?;
+    // The quota endpoint takes the raw key (no "Bearer").
+    let v: Value = crate::net::get(&format!("{host}/api/monitor/usage/quota/limit"))
+        .set("Authorization", &key)
+        .set("Accept-Language", "zh-CN")
+        .call()
+        .map_err(http_error)?
+        .into_json()
+        .map_err(|_| "返回格式不对".to_string())?;
+    let limits = v.pointer("/data/limits").and_then(|x| x.as_array()).cloned().unwrap_or_default();
+    if limits.is_empty() {
+        let msg = v.get("msg").and_then(|x| x.as_str()).unwrap_or("该密钥没有 Coding Plan 额度");
+        return Err(msg.into());
+    }
+    let mut q = vec![];
+    for l in limits {
+        let kind = l.get("type").and_then(|x| x.as_str()).unwrap_or("");
+        let n = num(l.get("number")).unwrap_or(0.0) as i64;
+        let title = match (kind, num(l.get("unit")).unwrap_or(0.0) as i64) {
+            ("TIME_LIMIT", _) => "工具调用".to_string(),
+            (_, 3) => format!("{n} 小时"),
+            (_, 4) => if n == 7 { "每周".into() } else { format!("{n} 天") },
+            (_, 5) | (_, 6) => if n <= 1 { "每周".into() } else { format!("{n} 周") },
+            _ => "额度".to_string(),
+        };
+        let reset = num(l.get("nextResetTime")).map(|ms| if ms > 1e12 { (ms / 1000.0) as i64 } else { ms as i64 });
+        let value = match (num(l.get("currentValue")), num(l.get("usage"))) {
+            (Some(c), Some(u)) if kind == "TIME_LIMIT" => format!("{c:.0} / {u:.0}"),
+            _ => String::new(),
+        };
+        q.push(Quota { title, percent: num(l.get("percentage")), value, reset_at: reset, ..Default::default() });
+    }
+    let plan = v.pointer("/data/planName").or_else(|| v.pointer("/data/level")).and_then(|x| x.as_str()).map(plan_label).unwrap_or_default();
+    Ok((plan, q))
+}
+
+/* ------------------------------- Kimi Code ------------------------------- */
+
+fn window_title(d: &Value) -> String {
+    let dur = num(d.get("duration")).unwrap_or(0.0) as i64;
+    let unit = d.get("timeUnit").and_then(|x| x.as_str()).unwrap_or("");
+    let mins = if unit.contains("HOUR") { dur * 60 } else if unit.contains("DAY") { dur * 1440 } else { dur };
+    match mins {
+        300 => "5 小时".into(),
+        10080 => "每周".into(),
+        m if m >= 40000 => "每月".into(),
+        m if m % 60 == 0 && m > 0 => format!("{} 小时", m / 60),
+        _ => "额度".into(),
+    }
+}
+
+fn kimi_quota(title: String, d: &Value) -> Quota {
+    let (limit, used) = (num(d.get("limit")), num(d.get("used")).or_else(|| num(d.get("limit")).zip(num(d.get("remaining"))).map(|(l, r)| l - r)));
+    Quota {
+        title,
+        percent: limit.zip(used).filter(|(l, _)| *l > 0.0).map(|(l, u)| u / l * 100.0),
+        reset_at: iso_ts(d.get("resetTime")),
+        ..Default::default()
+    }
+}
+
+fn kimi_code(id: &str) -> Custom {
+    let key = need_key(id)?;
+    let v = get_json("https://api.kimi.com/coding/v1/usages", &key).or_else(|_| get_json("https://api.kimi.ai/coding/v1/usages", &key))?;
+    let mut q = vec![];
+    for l in v.get("limits").and_then(|x| x.as_array()).cloned().unwrap_or_default() {
+        if let Some(d) = l.get("detail") {
+            q.push(kimi_quota(l.get("window").map(window_title).unwrap_or_else(|| "额度".into()), d));
+        }
+    }
+    if let Some(u) = v.get("usage") {
+        q.push(kimi_quota(if q.is_empty() { "额度".into() } else { "每周".into() }, u));
+    }
+    if q.is_empty() {
+        return Err("未订阅 Kimi Code 套餐".into());
+    }
+    let plan = v.pointer("/user/membership/level").or_else(|| v.pointer("/membership")).and_then(|x| x.as_str()).map(|s| plan_label(s.trim_start_matches("LEVEL_"))).unwrap_or_default();
+    Ok((plan, q))
+}
+
+/* ------------------------------ Antigravity ------------------------------ */
+
+/// Reads quota from the running Antigravity desktop app's local language server.
+fn antigravity() -> Custom {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+    let mut sys = System::new();
+    sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::new().with_cmd(sysinfo::UpdateKind::Always).with_exe(sysinfo::UpdateKind::Always));
+    let proc_ = sys
+        .processes()
+        .values()
+        .find(|p| {
+            let exe = p.exe().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+            p.name().to_string_lossy().contains("language_server") && exe.contains("antigravity")
+        })
+        .ok_or("Antigravity 桌面版未运行（读取额度需要它在运行）")?;
+    let args: Vec<String> = proc_.cmd().iter().map(|a| a.to_string_lossy().to_string()).collect();
+    let arg = |name: &str| args.iter().position(|a| a == name).and_then(|i| args.get(i + 1).cloned()).or_else(|| args.iter().find_map(|a| a.strip_prefix(&format!("{name}=")).map(String::from)));
+    let csrf = arg("--csrf_token").ok_or("没有找到 Antigravity 的本地连接信息")?;
+    let pid = proc_.pid().as_u32();
+    let mut ports: Vec<u16> = listening_ports(pid);
+    if let Some(p) = arg("--extension_server_port").and_then(|p| p.parse().ok()) {
+        ports.push(p);
+    }
+    let body = json!({ "metadata": { "ideName": "antigravity", "extensionName": "antigravity", "locale": "zh-CN" } });
+    for port in ports {
+        for scheme in ["https", "http"] {
+            let url = format!("{scheme}://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/GetUserStatus");
+            let Ok(r) = local_agent()
+                .post(&url)
+                .set("Content-Type", "application/json")
+                .set("Connect-Protocol-Version", "1")
+                .set("X-Codeium-Csrf-Token", &csrf)
+                .send_json(body.clone())
+            else {
+                continue;
+            };
+            let Ok(v) = r.into_json::<Value>() else { continue };
+            let us = v.get("userStatus").unwrap_or(&v);
+            let plan = us.pointer("/planStatus/planInfo/planName").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            let mut q = vec![];
+            for m in us.pointer("/cascadeModelConfigData/clientModelConfigs").and_then(|x| x.as_array()).cloned().unwrap_or_default() {
+                let Some(qi) = m.get("quotaInfo") else { continue };
+                let remaining = num(qi.get("remainingFraction")).unwrap_or(1.0);
+                q.push(Quota {
+                    title: m.get("label").and_then(|x| x.as_str()).unwrap_or("模型").to_string(),
+                    percent: Some(((1.0 - remaining) * 100.0).clamp(0.0, 100.0)),
+                    reset_at: iso_ts(qi.get("resetTime")),
+                    ..Default::default()
+                });
+            }
+            // Many models share one quota; keep the distinct ones, highest usage first.
+            q.sort_by(|a, b| b.percent.partial_cmp(&a.percent).unwrap_or(std::cmp::Ordering::Equal));
+            q.dedup_by(|a, b| a.percent == b.percent && a.reset_at == b.reset_at);
+            if !q.is_empty() {
+                return Ok((plan, q));
+            }
+        }
+    }
+    Err("无法连接 Antigravity 本地服务（实验性功能）".into())
+}
+
+/// Local language server uses a self-signed certificate.
+fn local_agent() -> ureq::Agent {
+    let b = ureq::AgentBuilder::new().timeout(Duration::from_secs(3));
+    #[cfg(windows)]
+    let b = match native_tls::TlsConnector::builder().danger_accept_invalid_certs(true).build() {
+        Ok(c) => b.tls_connector(std::sync::Arc::new(c)),
+        Err(_) => b,
+    };
+    b.build()
+}
+
+fn listening_ports(pid: u32) -> Vec<u16> {
+    #[cfg(windows)]
+    let out = {
+        use std::os::windows::process::CommandExt;
+        Command::new("netstat").args(["-ano", "-p", "TCP"]).creation_flags(0x0800_0000).output()
+    };
+    #[cfg(not(windows))]
+    let out = Command::new("lsof").args(["-nP", "-a", "-iTCP", "-sTCP:LISTEN", "-p", &pid.to_string()]).output();
+    let Ok(o) = out else { return vec![] };
+    let text = String::from_utf8_lossy(&o.stdout);
+    let mut ports = vec![];
+    for line in text.lines() {
+        #[cfg(windows)]
+        let ok = line.contains("LISTENING") && line.split_whitespace().last() == Some(&pid.to_string());
+        #[cfg(not(windows))]
+        let ok = line.contains("LISTEN");
+        if !ok {
+            continue;
+        }
+        if let Some(p) = line.split_whitespace().find_map(|f| f.rsplit_once(':').and_then(|(_, p)| p.parse::<u16>().ok())) {
+            if !ports.contains(&p) {
+                ports.push(p);
+            }
+        }
+    }
+    ports
 }

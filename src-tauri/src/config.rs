@@ -17,6 +17,7 @@ pub fn defaults() -> Value {
         "shortcuts": {
             "toggle": "CommandOrControl+Shift+Space",
             "clipboard": "CommandOrControl+Shift+V",
+            "translate": "CommandOrControl+Shift+T",
             "todo": ""
         },
         "expandMode": "hover",
@@ -24,7 +25,7 @@ pub fn defaults() -> Value {
         "hideOnFullscreen": true,
         "clock24": true,
         "compact": {
-            "items": ["msg", "music", "rings", "cpu", "mem", "net", "lyric", "eq", "clock"],
+            "items": ["msg", "shelf", "music", "rings", "cpu", "mem", "net", "lyric", "eq", "clock"],
             "autoWidth": true,
             "width": 320,
             "ringMode": "single",
@@ -33,6 +34,11 @@ pub fn defaults() -> Value {
         },
         "pages": [
             { "id": "messages", "enabled": true },
+            { "id": "shelf", "enabled": true },
+            { "id": "translate", "enabled": true },
+            { "id": "calendar", "enabled": true },
+            { "id": "water", "enabled": true },
+            { "id": "devices", "enabled": true },
             { "id": "ai", "enabled": true },
             { "id": "music", "enabled": true },
             { "id": "monitor", "enabled": true },
@@ -52,6 +58,13 @@ pub fn defaults() -> Value {
         ],
         "weatherCity": "",
         "clipboard": true,
+        "clipboardImages": true,
+        "calendars": [],
+        "water": { "enabled": false, "goal": 2000, "cup": 250, "interval": 60, "start": "09:00", "end": "21:00" },
+        "eventReminder": 10,
+        "autoUpdate": true,
+        "statusAlerts": { "volume": true, "caps": true, "input": true, "network": true, "power": true, "devices": true },
+        "translate": { "provider": "deepseek", "baseUrl": "https://api.deepseek.com/v1", "model": "deepseek-chat", "target": "auto" },
         "focus": { "work": 25, "rest": 5 },
         "providers": [
             { "id": "claude", "name": "Claude", "kind": "claude", "enabled": true, "color": "#e8916b", "compact": true },

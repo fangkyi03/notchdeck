@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { api } from "../lib/api";
 import { todayKey } from "../lib/format";
-import type { ClipItem, Column, Config, Messages, FocusState, LyricLine, Media, Sys, Todo, Weather } from "../lib/types";
+import type { CalEvent, ClipItem, Device, StatusEvent, Column, Config, Messages, ShelfItem, WaterState, FocusState, LyricLine, Media, Sys, Todo, Weather } from "../lib/types";
 
 const HIST = 60;
 export type Hist = { cpu: number[]; mem: number[]; gpu: number[]; rx: number[]; tx: number[] };
@@ -25,6 +26,23 @@ type Data = {
   clips: ClipItem[];
   messages: Messages;
   reloadClips: () => void;
+  shelf: ShelfItem[];
+  setShelf: (s: ShelfItem[]) => void;
+  addToShelf: (paths: string[]) => void;
+  translateSeed: { text: string; n: number };
+  seedTranslate: (text: string) => void;
+  events: CalEvent[];
+  calErrors: string[];
+  refreshCalendar: () => void;
+  localEvents: CalEvent[];
+  setLocalEvents: (e: CalEvent[]) => void;
+  water: WaterState;
+  drink: (ml?: number) => void;
+  undoDrink: () => void;
+  notes: Record<string, string>;
+  setNote: (date: string, text: string) => void;
+  devices: Device[];
+  hud: StatusEvent | null;
   todos: Todo[];
   setTodos: (t: Todo[]) => void;
   focus: FocusState;
@@ -39,6 +57,14 @@ const Ctx = createContext<Data>(null as unknown as Data);
 export const useData = () => useContext(Ctx);
 
 const DEFAULT_FOCUS: FocusState = { mode: "work", running: false, endsAt: 0, remaining: 0, rounds: 0 };
+
+/** Today's start-of-window time ("09:00") in ms, so the first reminder waits one interval. */
+function startOfToday(hm: string): number {
+  const [h, m] = hm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d.getTime();
+}
 
 export function DataProvider({ initial, children }: { initial: Config; children: ReactNode }) {
   const [cfg, setCfgState] = useState(initial);
@@ -55,6 +81,18 @@ export function DataProvider({ initial, children }: { initial: Config; children:
   const seenMsg = useRef<Set<string>>(new Set());
   const msgLoaded = useRef(false);
   const [todos, setTodosState] = useState<Todo[]>([]);
+  const [shelf, setShelfState] = useState<ShelfItem[]>([]);
+  const [remoteEvents, setRemoteEvents] = useState<CalEvent[]>([]);
+  const [calErrors, setCalErrors] = useState<string[]>([]);
+  const [localEvents, setLocalEventsState] = useState<CalEvent[]>([]);
+  const [water, setWaterState] = useState<WaterState>({ date: todayKey(), ml: 0, log: [], lastAt: 0 });
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const reminded = useRef<Set<string>>(new Set());
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [hud, setHud] = useState<StatusEvent | null>(null);
+  const hudTimer = useRef<number>();
+  const [translateSeed, setTranslateSeed] = useState({ text: "", n: 0 });
+  const seedTranslate = useCallback((text: string) => setTranslateSeed((s) => ({ text, n: s.n + 1 })), []);
   const [focus, setFocusState] = useState<FocusState>(DEFAULT_FOCUS);
   const [now, setNow] = useState(new Date());
   const [alert, setAlert] = useState<string | null>(null);
@@ -208,7 +246,112 @@ export function DataProvider({ initial, children }: { initial: Config; children:
   /* ---- todos & focus (persisted) ---- */
   useEffect(() => {
     api.storeGet<Todo[]>("todos").then((t) => t && setTodosState(t));
+    api.storeGet<ShelfItem[]>("shelf").then((s) => s && setShelfState(s));
+    api.storeGet<CalEvent[]>("events").then((e) => e && setLocalEventsState(e));
+    api.storeGet<WaterState>("water").then((w) => w && setWaterState(w));
+    api.storeGet<Record<string, string>>("notes").then((n) => n && setNotes(n));
     api.storeGet<FocusState>("focus").then((f) => f && setFocusState(f));
+  }, []);
+  /* ---- calendar ---- */
+  const refreshCalendar = useCallback((force = false) => {
+    if (!cfg.calendars.length) { setRemoteEvents([]); setCalErrors([]); return; }
+    invoke<{ events: CalEvent[]; errors: string[] }>("calendar_events", { force })
+      .then((r) => { setRemoteEvents(r.events); setCalErrors(r.errors); })
+      .catch((e) => setCalErrors([String(e)]));
+  }, [cfg.calendars]);
+  useEffect(() => {
+    refreshCalendar();
+    const id = setInterval(() => refreshCalendar(), 10 * 60_000);
+    return () => clearInterval(id);
+  }, [refreshCalendar]);
+  useEffect(() => {
+    const un = listen("local-events-changed", () => api.storeGet<CalEvent[]>("events").then((e) => e && setLocalEventsState(e)));
+    return () => { un.then((f) => f()); };
+  }, []);
+  const setLocalEvents = useCallback((e: CalEvent[]) => { setLocalEventsState(e); api.storeSet("events", e); }, []);
+  const events = useMemo(() => [...remoteEvents, ...localEvents].sort((a, b) => a.start - b.start), [remoteEvents, localEvents]);
+  // Meeting reminders.
+  useEffect(() => {
+    if (!cfg.eventReminder) return;
+    const t = now.getTime() / 1000;
+    for (const e of events) {
+      if (e.all_day || reminded.current.has(e.id)) continue;
+      const left = e.start - t;
+      if (left > 0 && left <= cfg.eventReminder * 60) {
+        reminded.current.add(e.id);
+        pushAlert(`${Math.max(1, Math.round(left / 60))} 分钟后：${e.title}`);
+      }
+    }
+  }, [now, events, cfg.eventReminder, pushAlert]);
+
+  /* ---- water ---- */
+  const drink = useCallback((ml?: number) => {
+    setWaterState((w) => {
+      const base = w.date === todayKey() ? w : { date: todayKey(), ml: 0, log: [], lastAt: 0 };
+      const amount = ml ?? cfg.water.cup;
+      const next = { ...base, ml: base.ml + amount, log: [...base.log, amount], lastAt: Date.now() };
+      api.storeSet("water", next);
+      return next;
+    });
+  }, [cfg.water.cup]);
+  const undoDrink = useCallback(() => {
+    setWaterState((w) => {
+      if (!w.log.length) return w;
+      const next = { ...w, ml: Math.max(0, w.ml - w.log[w.log.length - 1]), log: w.log.slice(0, -1) };
+      api.storeSet("water", next);
+      return next;
+    });
+  }, []);
+  const waterToday = water.date === todayKey() ? water : { date: todayKey(), ml: 0, log: [], lastAt: water.lastAt };
+  const lastWaterNag = useRef(0);
+  useEffect(() => {
+    const w = cfg.water;
+    if (!w.enabled || waterToday.ml >= w.goal) return;
+    const hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    if (hm < w.start || hm > w.end) return;
+    const since = Math.max(waterToday.lastAt, lastWaterNag.current, startOfToday(w.start));
+    if (Date.now() - since >= w.interval * 60_000) {
+      lastWaterNag.current = Date.now();
+      pushAlert(`该喝水了 💧 今天 ${waterToday.ml}/${w.goal} ml`);
+    }
+  }, [now, cfg.water, waterToday.ml, waterToday.lastAt, pushAlert]);
+
+  /* ---- update check (once a day) ---- */
+  useEffect(() => {
+    if (!cfg.autoUpdate) return;
+    const run = () => import("@tauri-apps/plugin-updater").then(({ check }) => check())
+      .then((u) => { if (u) pushAlert(`NotchDeck ${u.version} 可以更新了 · 设置 › 关于与更新`); })
+      .catch(() => {});
+    const first = setTimeout(run, 30_000);
+    const id = setInterval(run, 24 * 3600_000);
+    return () => { clearTimeout(first); clearInterval(id); };
+  }, [cfg.autoUpdate, pushAlert]);
+
+  /* ---- devices & system status ---- */
+  useEffect(() => {
+    invoke<Device[]>("get_devices").then(setDevices);
+    const a = listen<Device[]>("devices-changed", (e) => setDevices(e.payload));
+    const b = listen<StatusEvent>("status", (e) => {
+      setHud(e.payload);
+      clearTimeout(hudTimer.current);
+      hudTimer.current = window.setTimeout(() => setHud(null), e.payload.kind === "volume" ? 1600 : 2500);
+    });
+    return () => { a.then((f) => f()); b.then((f) => f()); };
+  }, []);
+
+  /* ---- daily notes ---- */
+  const setNote = useCallback((date: string, text: string) => {
+    setNotes((n) => { const next = { ...n, [date]: text }; if (!text) delete next[date]; api.storeSet("notes", next); return next; });
+  }, []);
+
+  const setShelf = useCallback((s: ShelfItem[]) => { setShelfState(s); api.storeSet("shelf", s); }, []);
+  const addToShelf = useCallback((paths: string[]) => {
+    setShelfState((cur) => {
+      const now = Date.now() / 1000;
+      const next = [...paths.filter((p) => !cur.some((c) => c.path === p)).map((path) => ({ path, added: now })), ...cur];
+      api.storeSet("shelf", next);
+      return next;
+    });
   }, []);
   const setTodos = useCallback((t: Todo[]) => { setTodosState(t); api.storeSet("todos", t); }, []);
   const setFocus = useCallback((f: FocusState) => { setFocusState(f); api.storeSet("focus", f); }, []);
@@ -228,7 +371,7 @@ export function DataProvider({ initial, children }: { initial: Config; children:
 
   const value: Data = {
     cfg, setCfg, sys, hist, cols, refreshUsage: () => refreshUsage(true), media, position, lyrics, lyricIndex,
-    weather, weatherError, refreshWeather: () => refreshWeather(true), clips, messages, reloadClips, todos, setTodos, focus, setFocus, now, alert, pushAlert,
+    weather, weatherError, refreshWeather: () => refreshWeather(true), clips, messages, reloadClips, shelf, setShelf, addToShelf, translateSeed, seedTranslate, events, calErrors, refreshCalendar: () => refreshCalendar(true), localEvents, setLocalEvents, water: waterToday, drink, undoDrink, notes, setNote, devices, hud, todos, setTodos, focus, setFocus, now, alert, pushAlert,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

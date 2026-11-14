@@ -42,9 +42,21 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --registry=https://registry.npmjs.org
 
+      # With the updater signing key: signed update bundles + latest.json for in-app updates.
+      # Without it: plain installers (the build still succeeds).
+      - name: Updater signing
+        id: sign
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo 'extra=' >> "$GITHUB_OUTPUT"; else echo "extra=--config {\"bundle\":{\"createUpdaterArtifacts\":false}}" >> "$GITHUB_OUTPUT"; echo "::warning::TAURI_SIGNING_PRIVATE_KEY not set — building without auto-update artifacts"; fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: NotchDeck ${{ github.ref_name }}
@@ -53,6 +65,7 @@ jobs:
 
             - **macOS**：Apple Silicon 选 `aarch64.dmg`，Intel 选 `x64.dmg`。应用未签名，首次打开请右键 › 打开，或在「系统设置 › 隐私与安全性」中点「仍要打开」。
             - **Windows**：`x64-setup.exe`（安装版）或 `.msi`。如出现「Windows 已保护你的电脑」，点「更多信息 › 仍要运行」。
+          includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} ${{ steps.sign.outputs.extra }}
