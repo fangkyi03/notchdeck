@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NotchDeck · 桌面灵动岛</title>
+<meta name="description" content="NotchDeck：macOS 与 Windows 通用的桌面灵动岛。AI 编程工具额度、消息提醒、音乐歌词、系统监控、待办与番茄钟，收在屏幕顶部的一座小岛里。">
+<meta property="og:title" content="NotchDeck · 桌面灵动岛">
+<meta property="og:description" content="macOS 与 Windows 通用的桌面灵动岛，开源免费。">
+<meta property="og:image" content="screenshots/page-ai.png">
+<link rel="icon" href="icon.png">
+<style>
+:root {
+  --bg: #f6f5f8; --fg: #16151a; --muted: #6b6976; --card: #ffffff; --line: #e6e4ea;
+  --accent: #6d5bff; --accent2: #ff6b9a; --island: #000;
+  --radius: 22px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0b10; --fg: #f3f2f7; --muted: #9a97a6; --card: #16151c; --line: #26242e; }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* nav */
+nav { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px); background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid var(--line); }
+nav .wrap { display: flex; align-items: center; height: 60px; gap: 28px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; text-decoration: none; font-size: 17px; }
+.brand img { width: 28px; height: 28px; border-radius: 8px; }
+nav .links { display: flex; gap: 22px; margin-left: auto; font-size: 14px; }
+nav .links a { text-decoration: none; color: var(--muted); }
+nav .links a:hover { color: var(--fg); }
+@media (max-width: 640px) { nav .links a:not(.gh) { display: none; } }
+
+/* hero */
+.hero { padding: 88px 0 40px; text-align: center; position: relative; overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: -40% -10% auto; height: 720px; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent), radial-gradient(closest-side at 70% 40%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent); z-index: -1; filter: blur(10px); }
+.pill-tag { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); border: 1px solid var(--line); background: var(--card); padding: 5px 14px; border-radius: 999px; }
+.pill-tag b { color: var(--accent); }
+h1 { font-size: clamp(40px, 7vw, 76px); line-height: 1.05; letter-spacing: -0.03em; margin: 22px 0 18px; font-weight: 850; }
+h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 680px; margin: 0 auto; }
+.cta { display: flex; gap: 12px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 14px; font-weight: 650; text-decoration: none; font-size: 15px; }
+.btn.primary { background: var(--fg); color: var(--bg); }
+.btn.ghost { border: 1px solid var(--line); background: var(--card); }
+.btn:hover { transform: translateY(-1px); }
+.platforms { margin-top: 16px; color: var(--muted); font-size: 13px; }
+
+/* stage: fake desktop with the island */
+.stage { margin: 56px auto 0; max-width: 1000px; border-radius: 26px; padding: 0 0 36px; background: linear-gradient(135deg, #b9c7dd, #d8c9e4 55%, #ead8ca); box-shadow: 0 30px 80px -30px rgba(40, 20, 80, .35); overflow: hidden; }
+.menubar { height: 30px; background: rgba(255,255,255,.35); display: flex; align-items: center; padding: 0 16px; gap: 18px; font-size: 12px; color: rgba(0,0,0,.55); }
+.stage img { margin: -30px auto 0; width: 82%; position: relative; }
+.stage .compact { width: 76%; margin: 22px auto 0; border-radius: 0; }
+
+/* sections */
+section { padding: 96px 0 0; }
+.kicker { color: var(--accent); font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+h2 { font-size: clamp(28px, 4.2vw, 44px); letter-spacing: -0.02em; line-height: 1.15; margin: 8px 0 14px; }
+.sub { color: var(--muted); max-width: 640px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 36px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; overflow: hidden; }
+.card img { border-radius: 14px; }
+.card h3 { font-size: 17px; margin: 14px 4px 4px; }
+.card p { color: var(--muted); font-size: 14px; margin: 0 4px; }
+
+.split { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; margin-top: 36px; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+.ticks { list-style: none; display: grid; gap: 10px; margin-top: 18px; }
+.ticks li { padding-left: 28px; position: relative; color: var(--muted); }
+.ticks li b { color: var(--fg); }
+.ticks li::before { content: ""; position: absolute; left: 4px; top: 9px; width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+
+.forms { display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; justify-content: center; background: linear-gradient(135deg, #b9c7dd, #d8c9e4 55%, #ead8ca); border-radius: var(--radius); padding: 28px 24px; }
+.forms figure { text-align: center; color: #3a3550; font-size: 13px; }
+.forms figure img { margin: 0 auto 8px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+
+.skins { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 32px; }
+.skins figure { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px; }
+.skins figcaption { font-size: 13px; color: var(--muted); padding: 8px 4px 2px; }
+
+.download { margin: 96px 0 0; text-align: center; padding: 64px 24px; border-radius: 28px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--card)), color-mix(in srgb, var(--accent2) 10%, var(--card))); border: 1px solid var(--line); }
+.download h2 { margin-top: 0; }
+.download .cta { margin-top: 26px; }
+.note { color: var(--muted); font-size: 13px; margin-top: 18px; }
+
+pre { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; font: 13px/1.7 ui-monospace, Menlo, Consolas, monospace; margin-top: 16px; }
+
+footer { padding: 72px 0 48px; color: var(--muted); font-size: 13px; text-align: center; }
+footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon.png" alt="">NotchDeck</a>
+    <div class="links">
+      <a href="#features">功能</a>
+      <a href="#platforms">平台</a>
+      <a href="#skins">皮肤</a>
+      <a href="#download">下载</a>
+      <a href="guide.html">使用说明</a>
+      <a class="gh" href="https://github.com/fangkyi03/notchdeck">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill-tag"><b>开源免费</b> macOS · Windows · Tauri 2</span>
+    <h1>屏幕顶部的<br><span>一座小岛</span></h1>
+    <p class="lead">AI 编程额度、消息提醒、音乐歌词、系统监控、待办与番茄钟。平时收起，鼠标移上去就展开，移开就收起。</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/fangkyi03/notchdeck/releases/latest">下载最新版</a>
+      <a class="btn ghost" href="guide.html">使用说明</a>
+    </div>
+    <p class="platforms">macOS 11+（Apple Silicon / Intel） · Windows 10 / 11 x64</p>
+
+    <div class="stage">
+      <div class="menubar"><b></b><span>访达</span><span>文件</span><span>编辑</span><span>显示</span><span>窗口</span><span>帮助</span></div>
+      <img src="screenshots/page-ai.png" alt="NotchDeck 展开的 AI 额度面板：Claude、Codex、Cursor、DeepSeek 四列额度与今日、七日费用">
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="features">
+    <div class="kicker">收起时</div>
+    <h2>一眼看到最常用的信息</h2>
+    <p class="sub">消息未读、AI 额度环、CPU 核心、内存、GPU、网速、正在播放的歌词……收起内容可以自由挑选和排序，宽度随内容自适应，数字变化时也不会来回跳动。</p>
+    <div class="card" style="margin-top:32px;padding:0;background:linear-gradient(135deg,#b9c7dd,#d8c9e4 55%,#ead8ca)">
+      <img src="screenshots/compact-notch.png" alt="收起的刘海：微信、QQ、飞书未读，专辑封面，额度环，CPU 核心柱，CPU、内存、GPU 表盘，网速与律动条">
+    </div>
+
+    <div class="split">
+      <div class="forms">
+        <figure><img src="screenshots/compact-cream.png" width="300" alt="奶油皮肤的刘海：时间、天气、番茄钟与待办进度">刘海 · 贴住顶边</figure>
+        <figure><img src="screenshots/compact-lyric.png" width="300" alt="悬浮胶囊显示当前一句歌词">胶囊 · 单行歌词</figure>
+        <figure><img src="screenshots/compact-side.png" width="34" alt="贴在左侧的竖向胶囊">侧边竖向</figure>
+      </div>
+      <div>
+        <div class="kicker">放在哪都行</div>
+        <h2>拖到哪，就停在哪</h2>
+        <ul class="ticks">
+          <li><b>沿顶边移动</b>，拖离顶边变成悬浮胶囊，拖回去自动吸附。</li>
+          <li><b>拖到左右边缘</b>，自动变成竖向胶囊，面板从侧边展开。</li>
+          <li><b>多显示器</b>，直接拖到另一块屏幕；分辨率、缩放不同也能对齐。</li>
+          <li><b>闲置贴边隐藏</b>，不用时缩成一条细线。</li>
+          <li><b>全屏自动隐藏</b>，以及只能用快捷键打开的游戏模式。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">展开后</div>
+    <h2>九个页面，左右一滑就到</h2>
+    <p class="sub">左右箭头、滚轮或键盘切换；页面可以开关和排序，面板边缘拖一拖就能调整大小。</p>
+    <div class="grid">
+      <div class="card"><img src="screenshots/page-ai.png" alt="AI 额度页"><h3>AI 额度</h3><p>Claude、Codex 的 5 小时与每周额度、重置倒计时；DeepSeek、OpenRouter、Kimi 余额；今日与七日 Token、费用估算。</p></div>
+      <div class="card"><img src="screenshots/page-details.png" alt="模型明细页"><h3>模型明细</h3><p>按工具和模型拆开看今天、最近七天各花了多少。</p></div>
+      <div class="card"><img src="screenshots/page-messages.png" alt="消息提醒页"><h3>消息提醒</h3><p>微信、QQ、企业微信、钉钉、飞书有新消息时出现在岛上，点一下切过去。</p></div>
+      <div class="card"><img src="screenshots/page-music.png" alt="音乐页"><h3>音乐与歌词</h3><p>封面、进度、播放控制和同步歌词；收起时也能只留一句歌词。</p></div>
+      <div class="card"><img src="screenshots/page-monitor.png" alt="系统监控页"><h3>系统监控</h3><p>CPU 每核心、GPU、内存、网速曲线、硬盘、电池，以及占用最高的应用。</p></div>
+      <div class="card"><img src="screenshots/page-todo.png" alt="待办页"><h3>待办</h3><p>今天的任务和完成进度，未完成的自动顺延到第二天。</p></div>
+      <div class="card"><img src="screenshots/page-focus.png" alt="番茄专注页"><h3>番茄专注</h3><p>专注与休息交替，收起时显示倒计时，结束时在岛上提醒。</p></div>
+      <div class="card"><img src="screenshots/page-clipboard.png" alt="剪贴板页"><h3>剪贴板</h3><p>最近复制的文字，点一下重新复制，常用的可以置顶。</p></div>
+      <div class="card"><img src="screenshots/page-weather.png" alt="天气页"><h3>天气</h3><p>实况与未来四天预报，自动定位或手动填城市。</p></div>
+    </div>
+  </section>
+
+  <section id="platforms">
+    <div class="kicker">两个平台，各尽所能</div>
+    <h2>不因为一边不支持，就砍掉另一边</h2>
+    <p class="sub">同一套界面，底层按平台分别实现，用上各自系统能提供的能力。</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>功能</th><th>macOS</th><th>Windows</th></tr>
+        <tr><td>消息提醒</td><td>Dock 图标未读数</td><td>任务栏闪烁 + 系统通知中心</td></tr>
+        <tr><td>正在播放</td><td>Spotify、Apple Music</td><td>系统媒体会话：网易云、QQ 音乐、酷狗、Spotify、浏览器等</td></tr>
+        <tr><td>GPU 占用</td><td>IOAccelerator</td><td>PDH 性能计数器</td></tr>
+        <tr><td>全屏隐藏</td><td>不进入全屏应用的空间</td><td>检测前台全屏窗口</td></tr>
+        <tr><td>系统代理</td><td>系统网络设置</td><td>Internet 设置</td></tr>
+        <tr><td>密钥存储</td><td>钥匙串</td><td>凭据管理器</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="skins">
+    <div class="kicker">外观</div>
+    <h2>九款皮肤，外加你的配色</h2>
+    <p class="sub">经典黑、奶油、毛玻璃浅 / 深、One Dark Pro、Dracula、Night Owl、GitHub Light、赛博朋克，或者自己调。</p>
+    <div class="skins">
+      <figure><img src="screenshots/skin-dracula.png" alt="Dracula 皮肤"><figcaption>Dracula</figcaption></figure>
+      <figure><img src="screenshots/skin-cream.png" alt="奶油皮肤"><figcaption>奶油</figcaption></figure>
+      <figure><img src="screenshots/skin-glass.png" alt="毛玻璃浅色皮肤"><figcaption>毛玻璃 · 浅</figcaption></figure>
+      <figure><img src="screenshots/skin-cyber.png" alt="赛博朋克皮肤"><figcaption>赛博朋克</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="split">
+      <div>
+        <div class="kicker">隐私</div>
+        <h2>数据留在你的电脑上</h2>
+        <ul class="ticks">
+          <li><b>不读聊天内容</b>：只看未读数、任务栏闪烁，以及你允许的系统通知。</li>
+          <li><b>密钥进钥匙串</b>：API Key 存在系统钥匙串 / 凭据管理器，不写进配置文件。</li>
+          <li><b>不改你的登录</b>：Claude 令牌只在内存里用来读额度，不续期、不写盘。</li>
+          <li><b>联网只为必要的事</b>：额度、歌词（LRCLIB）、天气（Open-Meteo）。</li>
+        </ul>
+      </div>
+      <div class="card"><img src="screenshots/settings.png" alt="设置窗口"></div>
+    </div>
+  </section>
+
+  <div class="download" id="download">
+    <h2>现在就试试</h2>
+    <p class="sub" style="margin:0 auto">从 GitHub Releases 下载对应平台的安装包。</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/fangkyi03/notchdeck/releases/latest">下载 macOS / Windows 版</a>
+      <a class="btn ghost" href="https://github.com/fangkyi03/notchdeck#安装与运行">从源码构建</a>
+    </div>
+    <p class="note">应用尚未签名：macOS 首次打开请右键 › 打开；Windows 出现「已保护你的电脑」时点「更多信息 › 仍要运行」。</p>
+    <pre>git clone https://github.com/fangkyi03/notchdeck.git
+cd notchdeck && npm install
+npm run tauri dev</pre>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    NotchDeck · 设计参考 <a href="https://github.com/MoFeng2223/BrimDeck">BrimDeck</a>、<a href="https://github.com/flyl1u/fly-island">fly-island</a>、<a href="https://github.com/Renly1994/xiaotang-daozai">岛仔</a>
+    · 歌词 <a href="https://lrclib.net">LRCLIB</a> · 天气 <a href="https://open-meteo.com">Open-Meteo</a>
+  </div>
+</footer>
+</body>
+</html>

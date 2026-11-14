@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust_target: aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust_target: x86_64-apple-darwin
+          - platform: windows-latest
+            args: ""
+            rust_target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci --registry=https://registry.npmjs.org
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: NotchDeck ${{ github.ref_name }}
+          releaseBody: |
+            安装包由 GitHub Actions 自动构建。
+
+            - **macOS**：Apple Silicon 选 `aarch64.dmg`，Intel 选 `x64.dmg`。应用未签名，首次打开请右键 › 打开，或在「系统设置 › 隐私与安全性」中点「仍要打开」。
+            - **Windows**：`x64-setup.exe`（安装版）或 `.msi`。如出现「Windows 已保护你的电脑」，点「更多信息 › 仍要运行」。
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

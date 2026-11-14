@@ -1,0 +1,56 @@
+[package]
+name = "notchdeck"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "notchdeck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = "0.32"
+chrono = "0.4"
+dirs = "5"
+base64 = "0.22"
+arboard = { version = "3", default-features = false }
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-global-shortcut = "2"
+
+[target.'cfg(not(windows))'.dependencies]
+ureq = { version = "2", features = ["json"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+
+[target.'cfg(windows)'.dependencies]
+# Windows uses the system TLS (schannel), so no C toolchain is needed for ring.
+ureq = { version = "2", default-features = false, features = ["json", "native-tls", "gzip"] }
+native-tls = "0.2"
+windows = { version = "0.58", features = [
+  "Foundation",
+  "Media_Control",
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Performance",
+  "Win32_System_Power",
+  "Storage_Streams",
+  "Win32_System_Threading",
+  "Win32_System_LibraryLoader",
+  "UI_Notifications",
+  "UI_Notifications_Management",
+  "ApplicationModel",
+  "Foundation_Collections",
+] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

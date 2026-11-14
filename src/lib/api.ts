@@ -1,0 +1,30 @@
+import { invoke } from "@tauri-apps/api/core";
+import type { ClipItem, Column, Config, Dock, Messages, LyricLine, Media, MonitorInfo, Proc, Sys, Weather } from "./types";
+
+export const api = {
+  getConfig: () => invoke<Config>("get_config"),
+  saveConfig: (config: Config) => invoke<void>("save_config", { config }),
+  storeGet: <T,>(key: string) => invoke<T | null>("store_get", { key }),
+  storeSet: (key: string, value: unknown) => invoke<void>("store_set", { key, value }),
+  sys: () => invoke<Sys>("get_sys"),
+  procs: (byMem: boolean) => invoke<Proc[]>("get_procs", { byMem }),
+  usage: (force = false) => invoke<Column[]>("get_usage", { force }),
+  media: () => invoke<Media | null>("get_media"),
+  mediaControl: (action: "toggle" | "next" | "prev" | "seek", value?: number) => invoke<void>("media_control", { action, value }),
+  lyrics: (m: Media) => invoke<LyricLine[]>("get_lyrics", { title: m.title, artist: m.artist, album: m.album, duration: m.duration }),
+  weather: (force = false) => invoke<Weather>("get_weather", { force }),
+  clips: () => invoke<ClipItem[]>("clip_list"),
+  clipCopy: (text: string) => invoke<void>("clip_copy", { text }),
+  clipUpdate: (index: number, action: "pin" | "delete") => invoke<void>("clip_update", { index, action }),
+  clipClear: () => invoke<void>("clip_clear"),
+  place: (width: number, height: number, x: number, y: number, dock: Dock = "top") => invoke<[number, number]>("place_island", { width, height, x, y, dock }),
+  drag: (hw: number, hh: number, vw: number, vh: number, grabX: number, grabY: number, minY: number) => invoke<{ monitor: string; dock: Dock; x: number; y: number }>("drag_island", { hw, hh, vw, vh, grabX, grabY, minY }),
+  monitors: () => invoke<MonitorInfo[]>("list_monitors"),
+  secretSet: (id: string, value: string) => invoke<void>("secret_set", { id, value }),
+  secretHas: (id: string) => invoke<boolean>("secret_has", { id }),
+  messages: () => invoke<Messages>("get_messages"),
+  openMessageApp: (id: string) => invoke<void>("open_message_app", { id }),
+  setClickThrough: (on: boolean) => invoke<void>("set_click_through", { on }),
+  show: () => invoke<void>("show_island"),
+  openSettings: () => invoke<void>("open_settings"),
+};

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使用说明 · NotchDeck</title>
+<meta name="description" content="NotchDeck 使用说明：安装、基本操作、各页面用法、设置项与常见问题。">
+<link rel="icon" href="icon.png">
+<style>
+:root { --bg: #f6f5f8; --fg: #16151a; --muted: #6b6976; --card: #ffffff; --line: #e6e4ea; --accent: #6d5bff; --code: #f0eef5; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0b10; --fg: #f3f2f7; --muted: #9a97a6; --card: #16151c; --line: #26242e; --code: #1d1b25; }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { background: var(--bg); color: var(--fg); font: 15.5px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); }
+img { max-width: 100%; display: block; border-radius: 12px; }
+nav.top { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: color-mix(in srgb, var(--bg) 80%, transparent); border-bottom: 1px solid var(--line); }
+nav.top .in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; text-decoration: none; color: var(--fg); }
+.brand img { width: 26px; height: 26px; border-radius: 7px; }
+nav.top .links { margin-left: auto; display: flex; gap: 20px; font-size: 14px; }
+nav.top .links a { color: var(--muted); text-decoration: none; } nav.top .links a:hover { color: var(--fg); }
+
+.layout { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } aside { display: none; } }
+aside { position: sticky; top: 76px; align-self: start; padding: 32px 0; max-height: calc(100vh - 76px); overflow-y: auto; font-size: 14px; }
+aside a { display: block; color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 8px; }
+aside a:hover { color: var(--fg); background: var(--card); }
+aside .grp { color: var(--fg); font-weight: 700; font-size: 12px; letter-spacing: .04em; margin: 14px 10px 4px; }
+
+article { padding: 40px 0 96px; min-width: 0; }
+h1 { font-size: 38px; letter-spacing: -0.02em; line-height: 1.2; }
+.intro { color: var(--muted); margin: 10px 0 8px; }
+h2 { font-size: 26px; margin: 56px 0 12px; padding-top: 8px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; margin: 28px 0 8px; }
+p, ul, ol, table, pre, .tip, figure { margin: 10px 0; }
+ul, ol { padding-left: 1.4em; } li { margin: 4px 0; }
+code, kbd { font: 13px ui-monospace, Menlo, Consolas, monospace; background: var(--code); border-radius: 6px; padding: 1px 6px; }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; }
+pre { background: var(--code); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font: 13px/1.7 ui-monospace, Menlo, Consolas, monospace; }
+pre code { background: none; padding: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: block; overflow-x: auto; }
+table tbody, table thead { display: table; width: 100%; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+.tip { border-left: 3px solid var(--accent); background: var(--card); border-radius: 0 10px 10px 0; padding: 10px 14px; font-size: 14.5px; }
+.tip.warn { border-color: #ff9f0a; }
+figure { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px; }
+figcaption { color: var(--muted); font-size: 13px; padding: 6px 4px 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 7px; border-radius: 5px; line-height: 18px; vertical-align: 2px; }
+.mac { background: #e8e6ff; color: #4b3fd1; } .win { background: #dff1ff; color: #0b6bb5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mac { background: #2b2660; color: #b9b2ff; } :root:not([data-theme="light"]) .win { background: #0f3550; color: #8fd0ff; } }
+</style>
+</head>
+<body>
+<nav class="top"><div class="in">
+  <a class="brand" href="./"><img src="icon.png" alt="">NotchDeck</a>
+  <div class="links"><a href="./">首页</a><a href="guide.html">使用说明</a><a href="https://github.com/fangkyi03/notchdeck/releases/latest">下载</a><a href="https://github.com/fangkyi03/notchdeck">GitHub ↗</a></div>
+</div></nav>
+
+<div class="layout">
+<aside>
+  <div class="grp">开始</div>
+  <a href="#install">安装</a>
+  <a href="#first-run">首次运行与授权</a>
+  <div class="grp">基本操作</div>
+  <a href="#basics">展开与收起</a>
+  <a href="#move">移动、贴边与多屏</a>
+  <a href="#resize">调整大小</a>
+  <a href="#pages">切换页面</a>
+  <a href="#keys">快捷键</a>
+  <div class="grp">页面</div>
+  <a href="#p-messages">消息提醒</a>
+  <a href="#p-ai">AI 额度</a>
+  <a href="#p-details">模型明细</a>
+  <a href="#p-music">音乐与歌词</a>
+  <a href="#p-monitor">系统监控</a>
+  <a href="#p-todo">待办</a>
+  <a href="#p-focus">番茄专注</a>
+  <a href="#p-clipboard">剪贴板</a>
+  <a href="#p-weather">天气</a>
+  <div class="grp">设置</div>
+  <a href="#s-general">常规</a>
+  <a href="#s-look">外观与皮肤</a>
+  <a href="#s-compact">收起内容</a>
+  <a href="#s-pages">展开页面</a>
+  <a href="#s-ai">添加 AI 额度来源</a>
+  <div class="grp">其他</div>
+  <a href="#faq">常见问题</a>
+  <a href="#data">数据位置与卸载</a>
+</aside>
+
+<article>
+<h1>使用说明</h1>
+<p class="intro">NotchDeck 平时收起在屏幕顶部，鼠标移上去展开，移开收起。这份说明介绍安装、日常操作、每个页面的用法和设置项。标有 <span class="tag mac">macOS</span> <span class="tag win">Windows</span> 的内容只适用于对应平台。</p>
+
+<h2 id="install">安装</h2>
+<p>从 <a href="https://github.com/fangkyi03/notchdeck/releases/latest">GitHub Releases</a> 下载对应平台的安装包：</p>
+<table>
+<thead><tr><th>系统</th><th>文件</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><span class="tag mac">macOS</span> Apple Silicon（M 系列）</td><td><code>NotchDeck_x.y.z_aarch64.dmg</code></td><td>打开 dmg，把 NotchDeck 拖进「应用程序」</td></tr>
+<tr><td><span class="tag mac">macOS</span> Intel</td><td><code>NotchDeck_x.y.z_x64.dmg</code></td><td>同上</td></tr>
+<tr><td><span class="tag win">Windows</span> 10 / 11 x64</td><td><code>NotchDeck_x.y.z_x64-setup.exe</code> 或 <code>.msi</code></td><td>运行安装程序</td></tr>
+</tbody>
+</table>
+<div class="tip warn">安装包目前没有签名。<br>
+<span class="tag mac">macOS</span> 第一次打开时提示「无法验证开发者」：在「应用程序」里<b>右键 NotchDeck › 打开</b>，或到「系统设置 › 隐私与安全性」点「仍要打开」。<br>
+<span class="tag win">Windows</span> 出现「Windows 已保护你的电脑」：点<b>「更多信息」›「仍要运行」</b>。</div>
+
+<h3>从源码运行</h3>
+<p>需要 <a href="https://rustup.rs">Rust</a>、Node.js 18+ 和 Tauri 的<a href="https://tauri.app/start/prerequisites/">系统依赖</a>（Windows 需要 WebView2 与 Visual Studio C++ 构建工具）。</p>
+<pre><code>git clone https://github.com/fangkyi03/notchdeck.git
+cd notchdeck
+npm install
+npm run tauri dev      # 开发运行
+npm run tauri build    # 打包安装包</code></pre>
+
+<h2 id="first-run">首次运行与授权</h2>
+<p>启动后，小岛出现在主显示器顶部中央，菜单栏 / 系统托盘里有 NotchDeck 图标（右键可打开设置或退出）。<span class="tag mac">macOS</span> 上 NotchDeck 不显示在 Dock 中。</p>
+<p>用到下面这些功能时，系统会请求授权：</p>
+<table>
+<thead><tr><th>何时</th><th>系统提示</th><th>怎么做</th></tr></thead>
+<tbody>
+<tr><td><span class="tag mac">macOS</span> 第一次读取 Claude 额度</td><td>「NotchDeck 想要使用钥匙串中的 Claude Code-credentials」</td><td>输入登录密码后选<b>「始终允许」</b>，以后不再询问</td></tr>
+<tr><td><span class="tag mac">macOS</span> 第一次显示 Apple Music / Spotify</td><td>「NotchDeck 想要控制 Music」</td><td>选「好」，否则无法读取正在播放</td></tr>
+<tr><td><span class="tag mac">macOS</span> 第一次保存 API Key</td><td>钥匙串访问</td><td>选「始终允许」</td></tr>
+<tr><td><span class="tag win">Windows</span> 第一次读取系统通知</td><td>「允许 NotchDeck 访问你的通知？」</td><td>选「是」；如果错过了，见<a href="#p-messages">消息提醒</a></td></tr>
+</tbody>
+</table>
+
+<h2 id="basics">展开与收起</h2>
+<ul>
+<li><b>展开</b>：鼠标移到小岛上，停留片刻（默认 0.12 秒）就会展开。设置里可以改成「点击展开」或调整停留时间。</li>
+<li><b>收起</b>：鼠标移开即收起；也可以按 <kbd>Esc</kbd>。在输入框里打字时（例如添加待办），鼠标移开不会收起，按 <kbd>Esc</kbd> 或点别处即可。</li>
+<li><b>提醒</b>：额度用到 70% / 90%、有新消息、番茄钟结束时，收起的小岛上会显示一行提示，5 秒后消失。</li>
+<li><b>全屏</b>：其他应用全屏时小岛自动隐藏（可在设置中关闭）。</li>
+</ul>
+
+<h2 id="move">移动、贴边与多屏</h2>
+<div class="two">
+<figure><img src="screenshots/compact-lyric.png" alt=""><figcaption>拖离顶边 → 悬浮胶囊</figcaption></figure>
+<figure style="display:flex;gap:12px;align-items:center"><img src="screenshots/compact-side.png" alt="" style="width:34px"><figcaption>拖到左 / 右边缘 → 竖向胶囊，面板从侧边展开</figcaption></figure>
+</div>
+<ul>
+<li><b>移动</b>：按住收起的小岛（或展开面板的顶栏空白处）拖动。</li>
+<li><b>贴顶</b>：拖回距离顶边 16 像素以内会自动吸附，恢复刘海形态。</li>
+<li><b>侧边竖向</b>：拖到屏幕左边或右边 28 像素以内，变成竖向胶囊，可以沿边上下拖动；竖向时只显示图标类内容（歌词、网速等长文字会隐藏）。</li>
+<li><b>换屏</b>：直接拖到另一块屏幕即可，松手后会记住。也可以在 设置 › 常规 › 显示在 中选择。</li>
+<li><b>锁定</b>：设置 › 常规 › 锁定位置，防止误拖。「回到顶部居中」可以一键复位。</li>
+</ul>
+
+<h2 id="resize">调整大小</h2>
+<ul>
+<li><b>展开面板</b>：拖动面板的左、右、下边缘或两个下角。</li>
+<li><b>整体缩放</b>：设置 › 外观与皮肤 › 大小（80%–140%）。</li>
+<li><b>收起宽度</b>：默认随内容自适应；也可以在 设置 › 收起内容 中关闭「自适应宽度」并指定宽度。</li>
+</ul>
+
+<h2 id="pages">切换页面</h2>
+<p>展开后有四种方式切换页面：两侧的 <b>‹ ›</b> 箭头、<b>鼠标滚轮</b> / 触控板横滑、键盘 <kbd>←</kbd> <kbd>→</kbd>、点底部的<b>圆点</b>。不需要的页面可以在 设置 › 展开页面 中关闭或调整顺序。</p>
+<p>顶栏右侧：<b>⟳</b> 立即刷新（AI 额度、模型明细、天气页），<b>⚙</b> 打开设置。</p>
+
+<h2 id="keys">快捷键</h2>
+<table>
+<thead><tr><th>默认快捷键</th><th>作用</th></tr></thead>
+<tbody>
+<tr><td><kbd>⌘ ⇧ Space</kbd> / <kbd>Ctrl Shift Space</kbd></td><td>展开 / 收起小岛</td></tr>
+<tr><td><kbd>⌘ ⇧ V</kbd> / <kbd>Ctrl Shift V</kbd></td><td>打开剪贴板页</td></tr>
+<tr><td>（未设置）</td><td>打开待办页</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>收起</td></tr>
+<tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>展开时切换页面</td></tr>
+</tbody>
+</table>
+<p>在 设置 › 常规 › 快捷键 中点击输入框，直接按下想要的组合键即可（需要至少一个修饰键）；按 <kbd>Backspace</kbd> 清除。如果组合键已被其他应用占用，设置页顶部会提示。</p>
+
+<h2 id="p-messages">消息提醒</h2>
+<figure><img src="screenshots/page-messages.png" alt="消息提醒页"></figure>
+<p>微信、QQ、企业微信、钉钉、飞书、邮件、Telegram、Slack 有新消息时，收起的小岛上会出现带红点的应用图标，消息页里按应用列出。<b>点击</b>即可切换到该应用。</p>
+<h3><span class="tag mac">macOS</span> 工作方式</h3>
+<p>读取 Dock 图标上的未读数字，不读取消息内容。所以只要应用的 Dock 图标上有红色数字，NotchDeck 就能显示；在该应用的通知设置里关闭「标记」后则无法显示。</p>
+<h3><span class="tag win">Windows</span> 工作方式</h3>
+<ul>
+<li><b>任务栏闪烁</b>：微信、QQ 收到消息时会让任务栏按钮闪烁，NotchDeck 据此提醒，不读取聊天内容；切换到该应用后提醒自动消失。微信缩到托盘时没有任务栏按钮，此时无法提醒。</li>
+<li><b>系统通知</b>：右侧列出通知中心里的通知（标题与正文）。需要在 <b>设置 › 隐私和安全性 › 通知</b>（Windows 10 为 设置 › 隐私 › 通知）中允许应用访问通知；QQ 等应用还需在自身设置中开启「使用系统通知」。</li>
+</ul>
+
+<h2 id="p-ai">AI 额度</h2>
+<figure><img src="screenshots/page-ai.png" alt="AI 额度页"></figure>
+<p>每个工具一列：名称旁是套餐（如 Max、Plus），下面是各项额度的<b>已用比例</b>、进度条和<b>重置倒计时</b>；用到 70% 变橙色、90% 变红色。底部是今日 / 七日的 Token 用量与费用估算。</p>
+<ul>
+<li><b>Claude</b>：用本机 Claude Code 的登录读取 5 小时与每周额度，每分钟刷新一次；Token 与费用来自 <code>~/.claude/projects</code> 中的会话记录。</li>
+<li><b>Codex</b>：读取 <code>~/.codex/sessions</code> 中最近一次的额度快照（运行过 Codex 才会有），以及 Token 用量。</li>
+<li>名称右边出现「旧」字，表示这次读取失败，显示的是上次成功读到的数据（悬停可看时间）。</li>
+<li>想显示<b>剩余</b>而不是已用：设置 › 收起内容 › 显示剩余额度。</li>
+</ul>
+<div class="tip">费用按公开的模型单价估算，用于了解用量高低；订阅套餐的实际扣费以账单为准。</div>
+
+<h2 id="p-details">模型明细</h2>
+<figure><img src="screenshots/page-details.png" alt="模型明细页"></figure>
+<p>按模型列出 Token 与费用，最贵的排在最前。左上角选择「全部」或某个工具，再选「今日」或「七日」；右上角是合计。</p>
+
+<h2 id="p-music">音乐与歌词</h2>
+<figure><img src="screenshots/page-music.png" alt="音乐页"></figure>
+<ul>
+<li>显示封面、歌名、歌手 · 专辑；<b>点击或拖动进度条</b>跳转；中间是上一首 / 播放暂停 / 下一首。</li>
+<li>右侧是同步歌词（来自 LRCLIB），没有收录的歌曲显示「暂无歌词」。</li>
+<li>收起时，在 设置 › 收起内容 打开「歌词 / 歌名」，小岛上就会显示当前一句歌词。</li>
+<li><span class="tag mac">macOS</span> 支持 Spotify 和 Apple Music。<span class="tag win">Windows</span> 支持所有接入系统媒体控制的播放器：网易云音乐、QQ 音乐、酷狗、Spotify、浏览器等。</li>
+</ul>
+
+<h2 id="p-monitor">系统监控</h2>
+<figure><img src="screenshots/page-monitor.png" alt="系统监控页"></figure>
+<ul>
+<li>左侧：CPU 总占用和曲线、每个核心的柱状图、GPU、内存、下载 / 上传速度曲线、硬盘用量、电池（带闪电表示正在充电）。</li>
+<li>右侧：占用最高的 7 个应用，点「CPU / 内存」切换排序；同一应用的多个子进程合并显示。</li>
+<li>读数顺序和颜色在 设置 › 系统监控 中调整。</li>
+</ul>
+
+<h2 id="p-todo">待办</h2>
+<figure><img src="screenshots/page-todo.png" alt="待办页"></figure>
+<ul>
+<li>在输入框输入内容，按 <kbd>Enter</kbd> 添加；点左边的圆圈标记完成。</li>
+<li>点「开始」把任务设为<b>进行中</b>（同一时间只有一个）；悬停后点 × 删除。</li>
+<li>左边的圆环是今天的完成进度；没完成的任务会自动顺延到第二天。</li>
+</ul>
+
+<h2 id="p-focus">番茄专注</h2>
+<figure><img src="screenshots/page-focus.png" alt="番茄专注页"></figure>
+<ul>
+<li>点中间的 ▶ 开始，再点暂停；⟲ 重置当前时段。</li>
+<li>「专注」「休息」切换模式；时长在 设置 › 天气与专注 中修改（默认 25 / 5 分钟）。</li>
+<li>结束时小岛上提示，并自动切换到下一个时段；收起时可以显示倒计时（收起内容中打开「专注倒计时」）。</li>
+</ul>
+
+<h2 id="p-clipboard">剪贴板</h2>
+<figure><img src="screenshots/page-clipboard.png" alt="剪贴板页"></figure>
+<ul>
+<li>自动记录复制过的文字（最多 50 条），<b>点一下</b>就重新复制到剪贴板。</li>
+<li>📌 置顶常用内容（清空时保留）；× 删除单条；右上角垃圾桶清空未置顶的记录。</li>
+<li>颜色值（如 <code>#7955b8</code>）会显示色块；顶部可以搜索。</li>
+<li>不想记录：设置 › 常规 › 记录剪贴板。</li>
+</ul>
+
+<h2 id="p-weather">天气</h2>
+<figure><img src="screenshots/page-weather.png" alt="天气页"></figure>
+<p>当前温度、天气、体感、湿度、风速、日出日落，以及未来四天预报，每 15 分钟更新。默认按网络自动定位，也可以在 设置 › 天气与专注 填写城市（中英文都可以，按 Enter 保存）。</p>
+
+<h2 id="s-general">设置 › 常规</h2>
+<figure><img src="screenshots/settings.png" alt="设置窗口"></figure>
+<table>
+<thead><tr><th>设置项</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>展开方式 / 悬停延迟</td><td>悬停展开或点击展开；鼠标停留多久后展开</td></tr>
+<tr><td>全屏时自动隐藏</td><td>其他应用全屏时隐藏小岛</td></tr>
+<tr><td>24 小时制</td><td>时间显示方式</td></tr>
+<tr><td>锁定位置 / 显示在 / 小岛位置</td><td>防止误拖；指定显示器；一键回到顶部居中</td></tr>
+<tr><td>记录剪贴板</td><td>是否记录复制的文字</td></tr>
+<tr><td>开机自动启动</td><td>登录系统后自动运行</td></tr>
+<tr><td>闲置后贴边隐藏</td><td>收起后一段时间不操作，缩成一条细线；鼠标移上去恢复</td></tr>
+<tr><td>游戏模式（鼠标穿透）</td><td>收起时鼠标点击会穿过小岛、悬停不展开，只能用快捷键打开</td></tr>
+<tr><td>网络代理</td><td>留空自动使用环境变量或系统代理；填 <code>direct</code> 不使用代理；也可以填 <code>http://127.0.0.1:7890</code> 这样的地址</td></tr>
+<tr><td>快捷键</td><td>见<a href="#keys">快捷键</a></td></tr>
+</tbody>
+</table>
+
+<h2 id="s-look">设置 › 外观与皮肤</h2>
+<ul>
+<li><b>皮肤</b>：经典黑、奶油、毛玻璃 · 浅 / 深、One Dark Pro、Dracula、Night Owl、GitHub Light、赛博朋克；选「自定义」可以分别调整背景、文字、强调色等六种颜色。</li>
+<li><b>形态</b>：刘海（贴住顶边）或胶囊（悬浮在顶部下方）。</li>
+<li><b>大小</b>与<b>背景不透明度</b>。</li>
+</ul>
+
+<h2 id="s-compact">设置 › 收起内容</h2>
+<ul>
+<li>拖动 ⋮⋮ 调整顺序，打开开关显示在收起的小岛上。可选：消息提醒、专辑封面、AI 额度环、CPU 核心柱、CPU / 内存 / GPU 表盘、网速、歌词 / 歌名、律动条、时间、天气、专注倒计时、待办进度。</li>
+<li><b>额度环</b>：单环显示用得最多的一项；多环最多显示三项（从外到内）。额度环只显示在「AI 额度」设置中勾选了「收起时显示环」的工具。</li>
+<li><b>显示剩余额度</b>、<b>额度提醒</b>（70% / 90% 时提示）、<b>自适应宽度</b>。</li>
+</ul>
+
+<h2 id="s-pages">设置 › 展开页面</h2>
+<p>拖动调整页面顺序，开关控制是否显示；下方可以直接输入面板的宽和高。</p>
+
+<h2 id="s-ai">添加 AI 额度来源</h2>
+<p>在 设置 › AI 额度 底部选择来源，点「添加」。每一行可以开关、改名、改颜色、拖动排序，以及决定是否在收起时显示额度环。</p>
+<table>
+<thead><tr><th>来源</th><th>需要准备</th></tr></thead>
+<tbody>
+<tr><td>Claude</td><td>在本机用 <code>claude</code> 命令登录过 Claude Code（Pro / Max / Team 账户）</td></tr>
+<tr><td>Codex</td><td>在本机运行过 Codex CLI</td></tr>
+<tr><td>DeepSeek</td><td>在 DeepSeek 开放平台创建的 API Key</td></tr>
+<tr><td>OpenRouter</td><td>OpenRouter API Key（<code>sk-or-v1-</code> 开头）</td></tr>
+<tr><td>Kimi（Moonshot 开放平台）</td><td>Moonshot 开放平台的 API Key，国内版和国际版都可以</td></tr>
+<tr><td>自定义命令</td><td>一条命令，输出 JSON，例如 <code>[{"title":"本月","percent":42,"resetAt":"3 天后"}]</code>，或输出一行纯文本</td></tr>
+<tr><td>自定义 HTTP</td><td>HTTPS 地址、请求头（JSON），以及百分比 / 数值所在的字段路径，如 <code>data.balance</code>、<code>items.0.percent</code></td></tr>
+</tbody>
+</table>
+<p>API Key 填好后按 Enter 或点「保存」，会存入系统钥匙串（macOS）/ 凭据管理器（Windows），输入框不会再显示原值；点「删除」可移除。</p>
+
+<h2 id="faq">常见问题</h2>
+
+<h3>Claude 列显示「没有权限（HTTP 403）：Request not allowed」</h3>
+<p>这是 Anthropic 对所在网络地区的限制。如果你平时通过代理使用 Claude Code，NotchDeck 也需要走同一个代理：它会自动读取 <code>HTTPS_PROXY</code> 环境变量和系统代理；如果你的代理只在终端里生效，请在 <b>设置 › 常规 › 网络代理</b> 中填写，例如 <code>http://127.0.0.1:7890</code>。</p>
+
+<h3>Claude 列提示令牌缺少 user:profile 权限</h3>
+<p>用 <code>claude setup-token</code> 生成的令牌或第三方代理登录无法读取额度。在终端运行 <code>claude</code>，输入 <code>/login</code> 用账户重新登录即可。Token 与费用统计不受影响。</p>
+
+<h3>Codex 显示「暂无额度数据」</h3>
+<p>额度来自 Codex 写入本地的会话记录，运行一次 Codex 后就会出现。</p>
+
+<h3>小岛被菜单栏挡住 / 位置不对</h3>
+<p>到 设置 › 常规 点「回到顶部居中」。如果你调过显示器排列，也可以在「显示在」里重新选择显示器。</p>
+
+<h3>鼠标移上去不展开</h3>
+<p>检查是否打开了「游戏模式」（打开后只能用快捷键展开），以及「展开方式」是否为「点击展开」。</p>
+
+<h3><span class="tag win">Windows</span> 微信有消息但岛上没有提醒</h3>
+<p>微信需要在任务栏上有按钮才能闪烁提醒；如果微信只缩在托盘里，请把它打开放在任务栏。通知中心的消息需要允许通知访问，见<a href="#p-messages">消息提醒</a>。</p>
+
+<h3>正在播放没有显示</h3>
+<p><span class="tag mac">macOS</span> 目前支持 Spotify 和 Apple Music，首次需要允许自动化权限（系统设置 › 隐私与安全性 › 自动化）。<span class="tag win">Windows</span> 需要播放器支持系统媒体控制（音量浮窗里能看到歌曲信息即可）。</p>
+
+<h3>快捷键不起作用</h3>
+<p>组合键可能被其他应用占用，设置页的快捷键区域会显示提示；换一个组合即可。</p>
+
+<h2 id="data">数据位置与卸载</h2>
+<table>
+<thead><tr><th>内容</th><th>位置</th></tr></thead>
+<tbody>
+<tr><td>设置、待办、剪贴板历史、天气缓存</td><td><span class="tag mac">macOS</span> <code>~/Library/Application Support/NotchDeck</code><br><span class="tag win">Windows</span> <code>%APPDATA%\NotchDeck</code></td></tr>
+<tr><td>API Key</td><td>系统钥匙串 / 凭据管理器，服务名 <code>NotchDeck</code></td></tr>
+</tbody>
+</table>
+<p><b>卸载</b>：先在设置中关闭「开机自动启动」，然后 <span class="tag mac">macOS</span> 把 NotchDeck 从「应用程序」移到废纸篓；<span class="tag win">Windows</span> 在「设置 › 应用」中卸载。如需同时删除数据，再删除上表中的目录，并在钥匙串 / 凭据管理器中删除 <code>NotchDeck</code> 条目。</p>
+</article>
+</div>
+</body>
+</html>
