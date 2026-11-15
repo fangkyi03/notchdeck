@@ -1,0 +1,39 @@
+name: Warm build cache
+
+# Caches saved by a tag build can't be read by the next tag; caches saved on the
+# default branch can. Building on main keeps release builds incremental.
+on:
+  push:
+    branches: [main]
+    paths: ["src-tauri/**", ".github/workflows/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: warm-cache
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: macos-latest, rust_target: aarch64-apple-darwin }
+          - { platform: macos-latest, rust_target: x86_64-apple-darwin }
+          - { platform: windows-latest, rust_target: x86_64-pc-windows-msvc }
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "${{ matrix.rust_target }}" }
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          shared-key: release-${{ matrix.rust_target }}
+      - run: npm ci --registry=https://registry.npmjs.org
+      - run: npm run build
+      # Same profile and features as `tauri build`.
+      - run: cargo build --release --features tauri/custom-protocol --target ${{ matrix.rust_target }}
+        working-directory: src-tauri

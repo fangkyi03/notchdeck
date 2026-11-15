@@ -30,6 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -38,6 +39,9 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+          shared-key: release-${{ matrix.rust_target }}
+          # Only main saves caches (see warm-cache.yml); tag-scoped caches are useless to later tags.
+          save-if: false
 
       - name: Install frontend dependencies
         run: npm ci --registry=https://registry.npmjs.org
