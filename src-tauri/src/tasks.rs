@@ -39,6 +39,10 @@ pub struct Build {
     pub estimated: i64,
     pub url: String,
     pub error: String,
+    /// Last activity: now while building, else when the build finished.
+    pub updated: i64,
+    /// Found by "related to me" (triggered by / committed by the user) rather than listed by hand.
+    pub mine: bool,
 }
 
 static AGENTS: Mutex<Vec<AgentTask>> = Mutex::new(Vec::new());
@@ -214,42 +218,183 @@ fn urlencode(s: &str) -> String {
     s.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
 }
 
-fn fetch_build(base: &str, auth: &Option<String>, job: &str) -> Build {
-    let url = format!("{}/{}/lastBuild/api/json?tree=number,fullDisplayName,result,building,timestamp,duration,estimatedDuration,url", base.trim_end_matches('/'), job_path(job));
-    let mut req = crate::net::agent(Duration::from_secs(10)).get(&url);
-    if let Some(a) = auth { req = req.set("Authorization", a); }
-    let mut b = Build { job: job.into(), number: 0, name: job.into(), state: "error".into(), started: 0, duration: 0, estimated: 0, url: String::new(), error: String::new() };
-    match req.call() {
-        Ok(r) => match r.into_json::<Value>() {
-            Ok(v) => {
-                b.number = v["number"].as_i64().unwrap_or(0);
-                b.name = v["fullDisplayName"].as_str().unwrap_or(job).into();
-                b.started = v["timestamp"].as_i64().unwrap_or(0) / 1000;
-                b.duration = v["duration"].as_i64().unwrap_or(0) / 1000;
-                b.estimated = v["estimatedDuration"].as_i64().unwrap_or(0) / 1000;
-                b.url = v["url"].as_str().unwrap_or("").into();
-                b.state = if v["building"].as_bool() == Some(true) { "building".into() } else { v["result"].as_str().unwrap_or("notbuilt").to_lowercase().replace("not_built", "notbuilt") };
-            }
-            Err(_) => b.error = "返回的不是 JSON".into(),
-        },
-        Err(ureq::Error::Status(401 | 403, _)) => b.error = "账号或 API Token 不对".into(),
-        Err(ureq::Error::Status(404, _)) => b.error = "找不到这个任务（还没有构建过？）".into(),
-        Err(ureq::Error::Status(c, _)) => b.error = format!("HTTP {c}"),
-        Err(e) => b.error = format!("网络错误：{}", clip(&e.to_string(), 80)),
+struct Jenkins {
+    base: String,
+    user: String,
+    auth: Option<String>,
+}
+
+impl Jenkins {
+    fn from_cfg(cfg: &Value) -> Option<Self> {
+        let j = &cfg["jenkins"];
+        let base = j["url"].as_str().unwrap_or("").trim().trim_end_matches('/').to_string();
+        if j["enabled"].as_bool() != Some(true) || base.is_empty() { return None; }
+        let user = j["user"].as_str().unwrap_or("").trim().to_string();
+        let auth = crate::usage::secret_get("jenkins").filter(|_| !user.is_empty()).map(|tok| {
+            use base64::Engine;
+            format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("{user}:{tok}")))
+        });
+        Some(Jenkins { base, user, auth })
     }
-    b
+    fn req(&self, method: &str, path: &str) -> ureq::Request {
+        let mut r = crate::net::agent(Duration::from_secs(15)).request(method, &format!("{}/{}", self.base, path.trim_start_matches('/')));
+        if let Some(a) = &self.auth { r = r.set("Authorization", a); }
+        r
+    }
+    fn get(&self, path: &str) -> Result<Value, String> {
+        self.req("GET", path).call().map_err(jerr)?.into_json::<Value>().map_err(|_| "返回的不是 JSON".to_string())
+    }
+}
+
+fn jerr(e: ureq::Error) -> String {
+    match e {
+        ureq::Error::Status(401 | 403, _) => "账号或 API Token 不对".into(),
+        ureq::Error::Status(404, _) => "找不到这个任务（还没有构建过？）".into(),
+        ureq::Error::Status(c, _) => format!("HTTP {c}"),
+        e => format!("网络错误：{}", clip(&e.to_string(), 80)),
+    }
+}
+
+const BUILD_TREE: &str = "number,fullDisplayName,result,building,timestamp,duration,estimatedDuration,url";
+
+fn to_build(job: &str, v: &Value, mine: bool) -> Build {
+    let started = v["timestamp"].as_i64().unwrap_or(0) / 1000;
+    let duration = v["duration"].as_i64().unwrap_or(0) / 1000;
+    let building = v["building"].as_bool() == Some(true);
+    Build {
+        job: job.into(),
+        number: v["number"].as_i64().unwrap_or(0),
+        name: v["fullDisplayName"].as_str().unwrap_or(job).into(),
+        state: if building { "building".into() } else { v["result"].as_str().unwrap_or("notbuilt").to_lowercase().replace("not_built", "notbuilt") },
+        started,
+        duration,
+        estimated: v["estimatedDuration"].as_i64().unwrap_or(0) / 1000,
+        url: v["url"].as_str().unwrap_or("").into(),
+        error: String::new(),
+        updated: if building { now() } else { started + duration },
+        mine,
+    }
+}
+
+fn err_build(job: &str, error: String) -> Build {
+    Build { job: job.into(), number: 0, name: job.into(), state: "error".into(), started: 0, duration: 0, estimated: 0, url: String::new(), error, updated: 0, mine: false }
+}
+
+fn fetch_build(j: &Jenkins, job: &str) -> Build {
+    match j.get(&format!("{}/lastBuild/api/json?tree={BUILD_TREE}", job_path(job))) {
+        Ok(v) => to_build(job, &v, false),
+        Err(e) => err_build(job, e),
+    }
+}
+
+/// Jobs whose recent builds were started by — or include commits from — the user.
+/// Walks up to three folder levels in one request.
+fn fetch_mine(j: &Jenkins) -> Result<Vec<Build>, String> {
+    if j.user.is_empty() { return Ok(vec![]); }
+    let builds = format!("builds[{BUILD_TREE},actions[causes[userId]],culprits[id],changeSets[items[authorEmail,author[id]]]]{{0,10}}");
+    let tree = format!("jobs[fullName,{builds},jobs[fullName,{builds},jobs[fullName,{builds}]]]");
+    let v = j.get(&format!("api/json?tree={}", urlencode(&tree)))?;
+    let me = j.user.to_lowercase();
+    let is_me = |b: &Value| -> bool {
+        let eq = |x: &Value| x.as_str().is_some_and(|s| s.to_lowercase() == me || s.to_lowercase().split('@').next() == Some(me.as_str()));
+        b["actions"].as_array().into_iter().flatten().flat_map(|a| a["causes"].as_array().into_iter().flatten()).any(|c| eq(&c["userId"]))
+            || b["culprits"].as_array().into_iter().flatten().any(|c| eq(&c["id"]))
+            || b["changeSets"].as_array().into_iter().flatten().flat_map(|c| c["items"].as_array().into_iter().flatten()).any(|i| eq(&i["author"]["id"]) || eq(&i["authorEmail"]))
+    };
+    let mut out = Vec::new();
+    fn walk(jobs: &Value, is_me: &dyn Fn(&Value) -> bool, out: &mut Vec<Build>) {
+        for job in jobs.as_array().into_iter().flatten() {
+            if job.get("jobs").is_some_and(|x| x.is_array()) { walk(&job["jobs"], is_me, out); }
+            let Some(list) = job["builds"].as_array() else { continue };
+            if list.iter().any(is_me) {
+                if let Some(last) = list.first() {
+                    out.push(to_build(job["fullName"].as_str().unwrap_or(""), last, true));
+                }
+            }
+        }
+    }
+    walk(&v["jobs"], &is_me, &mut out);
+    Ok(out)
 }
 
 fn poll_jenkins(cfg: &Value) -> Vec<Build> {
-    let j = &cfg["jenkins"];
-    let base = j["url"].as_str().unwrap_or("").trim();
-    if j["enabled"].as_bool() != Some(true) || base.is_empty() { return vec![]; }
-    let user = j["user"].as_str().unwrap_or("");
-    let auth = crate::usage::secret_get("jenkins").filter(|_| !user.is_empty()).map(|tok| {
-        use base64::Engine;
-        format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("{user}:{tok}")))
-    });
-    j["jobs"].as_array().into_iter().flatten().filter_map(|x| x.as_str()).filter(|s| !s.trim().is_empty()).map(|job| fetch_build(base, &auth, job.trim())).collect()
+    let Some(j) = Jenkins::from_cfg(cfg) else { return vec![] };
+    let mut out: Vec<Build> = Vec::new();
+    if cfg["jenkins"]["mine"].as_bool() != Some(false) {
+        match fetch_mine(&j) {
+            Ok(list) => out = list,
+            Err(e) => out.push(err_build("Jenkins", e)),
+        }
+    }
+    for job in cfg["jenkins"]["jobs"].as_array().into_iter().flatten().filter_map(|x| x.as_str()).map(str::trim).filter(|s| !s.is_empty()) {
+        if !out.iter().any(|b| b.job == job) { out.push(fetch_build(&j, job)); }
+    }
+    // Most recently active first; errors last.
+    out.sort_by_key(|b| (b.state == "error", -b.updated));
+    out
+}
+
+#[derive(Serialize)]
+pub struct Param {
+    pub name: String,
+    /// "string" | "text" | "boolean" | "choice" | "password" | "other"
+    pub kind: String,
+    pub default: String,
+    pub choices: Vec<String>,
+    pub description: String,
+}
+
+/// Build parameters of a job (empty for a job without parameters).
+pub fn job_params(cfg: &Value, job: &str) -> Result<Vec<Param>, String> {
+    let j = Jenkins::from_cfg(cfg).ok_or("Jenkins 未开启")?;
+    let tree = "property[parameterDefinitions[name,type,description,choices,defaultParameterValue[value]]]";
+    let v = j.get(&format!("{}/api/json?tree={}", job_path(job), urlencode(tree)))?;
+    let mut out = Vec::new();
+    for p in v["property"].as_array().into_iter().flatten() {
+        for d in p["parameterDefinitions"].as_array().into_iter().flatten() {
+            let ty = d["type"].as_str().unwrap_or("");
+            let kind = match ty {
+                "StringParameterDefinition" => "string",
+                "TextParameterDefinition" => "text",
+                "BooleanParameterDefinition" => "boolean",
+                "ChoiceParameterDefinition" => "choice",
+                "PasswordParameterDefinition" => "password",
+                _ => "other",
+            };
+            let default = match &d["defaultParameterValue"]["value"] {
+                Value::String(s) => s.clone(),
+                Value::Bool(b) => b.to_string(),
+                Value::Null => String::new(),
+                x => x.to_string(),
+            };
+            out.push(Param {
+                name: d["name"].as_str().unwrap_or("").into(),
+                kind: kind.into(),
+                default,
+                choices: d["choices"].as_array().into_iter().flatten().filter_map(|c| c.as_str().map(String::from)).collect(),
+                description: d["description"].as_str().unwrap_or("").into(),
+            });
+        }
+    }
+    Ok(out)
+}
+
+/// Queue a build. Parameterised jobs go through buildWithParameters.
+pub fn trigger(cfg: &Value, job: &str, params: &HashMap<String, String>) -> Result<(), String> {
+    let j = Jenkins::from_cfg(cfg).ok_or("Jenkins 未开启")?;
+    if j.auth.is_none() { return Err("请先在 设置 › 任务 中填写用户名和 API Token".into()); }
+    let path = format!("{}/{}", job_path(job), if params.is_empty() { "build" } else { "buildWithParameters" });
+    let mut req = j.req("POST", &path);
+    // API-token requests are exempt from CSRF on current Jenkins; older ones want a crumb.
+    if let Ok(c) = j.get("crumbIssuer/api/json") {
+        if let (Some(f), Some(v)) = (c["crumbRequestField"].as_str(), c["crumb"].as_str()) { req = req.set(f, v); }
+    }
+    let form: Vec<(&str, &str)> = params.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    req.send_form(&form).map_err(|e| match e {
+        ureq::Error::Status(403, _) => "没有权限构建这个任务".to_string(),
+        e => jerr(e),
+    })?;
+    Ok(())
 }
 
 pub fn refresh_jenkins(app: &AppHandle) {

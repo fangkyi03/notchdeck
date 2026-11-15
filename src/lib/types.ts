@@ -46,7 +46,7 @@ export type Config = {
   water: { enabled: boolean; goal: number; cup: number; interval: number; start: string; end: string };
   /** Minutes before a timed event to show a reminder (0 = off). */
   eventReminder: number;
-  jenkins: { enabled: boolean; url: string; user: string; jobs: string[]; interval: number };
+  jenkins: { enabled: boolean; url: string; user: string; mine: boolean; jobs: string[]; interval: number };
   /** Alert on the island when an agent task or a Jenkins build finishes. */
   taskAlerts: boolean;
   autoUpdate: boolean;
@@ -194,4 +194,5 @@ export const COMPACT_LABELS: Record<CompactItem, string> = {
 export const METRIC_LABELS: Record<MetricId, string> = { cpu: "CPU", mem: "内存", gpu: "GPU", net: "网速", disk: "硬盘" };
 
 export type AgentTask = { id: string; tool: "claude" | "codex"; title: string; cwd: string; prompt: string; state: "running" | "done" | "idle"; started: number; updated: number; result: string };
-export type Build = { job: string; number: number; name: string; state: "building" | "success" | "failure" | "unstable" | "aborted" | "notbuilt" | "error"; started: number; duration: number; estimated: number; url: string; error: string };
+export type Build = { job: string; number: number; name: string; state: "building" | "success" | "failure" | "unstable" | "aborted" | "notbuilt" | "error"; started: number; duration: number; estimated: number; url: string; error: string; updated: number; mine: boolean };
+export type JobParam = { name: string; kind: "string" | "text" | "boolean" | "choice" | "password" | "other"; default: string; choices: string[]; description: string };

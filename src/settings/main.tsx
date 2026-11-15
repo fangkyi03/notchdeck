@@ -266,10 +266,11 @@ function TasksSection({ cfg, set }: { cfg: Config; set: (p: Partial<Config>) => 
     <p className="hint">定时请求 Jenkins 的 REST 接口读取各任务最近一次构建，不需要在 Jenkins 上安装插件或配置回调。</p>
     <Row label="开启 Jenkins"><Toggle on={j.enabled} set={(v) => upd({ enabled: v })} /></Row>
     <Row label="Jenkins 地址" hint="例如 https://jenkins.example.com"><TextField value={j.url} set={(v) => upd({ url: v.replace(/\/+$/, "") })} width={320} /></Row>
-    <Row label="用户名"><TextField value={j.user} set={(v) => upd({ user: v })} /></Row>
+    <Row label="用户名" hint="Jenkins 的用户 ID（右上角用户名点进去，地址 /user/ 后面那段）"><TextField value={j.user} set={(v) => upd({ user: v })} /></Row>
+    <Row label="显示与我相关的任务" hint="自动找出最近 10 次构建里由你触发、或包含你提交的任务；所有构建按更新时间排序"><Toggle on={j.mine !== false} set={(v) => upd({ mine: v })} /></Row>
     <div className="row"><div className="row-l"><div>API Token</div><small>Jenkins 右上角用户名 › 设置（Configure）› API Token › 添加新 Token；保存在系统钥匙串</small></div><div className="row-r" style={{ flex: 1, maxWidth: 420 }}><KeyInput id="jenkins" label="API Token" /></div></div>
     <Row label="刷新间隔"><Seg value={String(j.interval)} options={[["15", "15 秒"], ["30", "30 秒"], ["60", "1 分钟"], ["300", "5 分钟"]]} set={(v) => upd({ interval: +v })} /></Row>
-    <label className="f">关注的任务（每行一个；文件夹里的任务写成 文件夹/任务名）
+    <label className="f">额外关注的任务（每行一个；文件夹里的任务写成 文件夹/任务名）
       <textarea rows={4} value={jobs} placeholder={"backend-deploy\nfrontend/build-main"} onChange={(e) => setJobs(e.target.value)} onBlur={() => upd({ jobs: jobs.split("\n").map((s) => s.trim()).filter(Boolean) })} />
     </label>
     <div className="add"><button className="btn" onClick={check}>测试连接</button></div>

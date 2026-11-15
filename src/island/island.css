@@ -358,3 +358,13 @@ html[lang="en"] .p-title em { margin-left: 0.28em; }
 .bd-bar i { display: block; height: 100%; border-radius: 1px; background: var(--accent); }
 .c-tasks { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-variant-numeric: tabular-nums; }
 .c-fail { color: #ff453a; font-weight: 600; margin-left: 4px; }
+.p-page { transition: transform .18s ease, opacity .18s ease; }
+.bd-wrap.open .bd { background: var(--card); }
+.bd-mine { margin-left: 6px; padding: 0 5px; border-radius: 4px; font-size: 10px; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+.bd-detail { padding: 4px 6px 10px 22px; display: flex; flex-direction: column; gap: 6px; }
+.bd-form { display: flex; flex-direction: column; gap: 6px; }
+.bd-field { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; font-size: 12px; }
+.bd-field span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.bd-field input[type=text], .bd-field input[type=password], .bd-field select, .bd-field textarea { min-width: 0; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font: inherit; }
+.bd-field input[type=checkbox] { justify-self: start; }
+.pill-btn.primary { background: var(--accent); color: #fff; }

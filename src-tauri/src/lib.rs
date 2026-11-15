@@ -166,6 +166,11 @@ fn calendar_import(text: String) -> Vec<calendar::Event> {
 }
 
 #[tauri::command]
+fn set_arrow_keys(app: AppHandle, on: bool) {
+    runtime::set_arrow_keys(&app, on);
+}
+
+#[tauri::command]
 fn get_agents() -> Vec<tasks::AgentTask> {
     tasks::agents()
 }
@@ -178,6 +183,21 @@ fn get_builds() -> Vec<tasks::Build> {
 #[tauri::command]
 async fn refresh_builds(app: AppHandle) -> Result<Vec<tasks::Build>, String> {
     blocking(move || { tasks::refresh_jenkins(&app); tasks::builds() }).await
+}
+
+#[tauri::command]
+async fn jenkins_params(app: AppHandle, job: String) -> Result<Vec<tasks::Param>, String> {
+    let cfg = app.state::<AppState>().config.lock().unwrap().clone();
+    blocking(move || tasks::job_params(&cfg, &job)).await?
+}
+
+#[tauri::command]
+async fn jenkins_build(app: AppHandle, job: String, params: std::collections::HashMap<String, String>) -> Result<(), String> {
+    let cfg = app.state::<AppState>().config.lock().unwrap().clone();
+    blocking(move || tasks::trigger(&cfg, &job, &params)).await??;
+    // Pick up the new build soon (it sits in the queue for a few seconds first).
+    std::thread::spawn(move || { for _ in 0..3 { std::thread::sleep(std::time::Duration::from_secs(6)); tasks::refresh_jenkins(&app); } });
+    Ok(())
 }
 
 /// Open an http(s) link in the default browser.
@@ -401,7 +421,7 @@ pub fn run() {
             get_config, save_config, store_get, store_set, get_sys, get_procs, get_usage, get_media, media_control, get_lyrics,
             get_weather, clip_list, clip_copy, clip_restore, clip_update, clip_clear, place_island, drag_island, list_monitors, show_island, open_settings,
             secret_set, secret_has, get_messages, open_message_app, set_click_through,
-            shelf_info, shelf_action, drag_icon, translate_text, calendar_events, calendar_import, get_devices, get_agents, get_builds, refresh_builds, open_url
+            shelf_info, shelf_action, drag_icon, translate_text, calendar_events, calendar_import, get_devices, get_agents, get_builds, refresh_builds, open_url, jenkins_params, jenkins_build, set_arrow_keys
         ])
         .setup(|app| {
             net::set_override(app.state::<AppState>().config.lock().unwrap().get("proxy").and_then(|v| v.as_str()).unwrap_or(""));

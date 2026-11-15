@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api } from "../lib/api";
@@ -179,6 +180,8 @@ export function Island() {
         open("translate");
       }
       else if (payload === "todo") open("todo");
+      else if (payload === "prev-page") goRef.current(-1);
+      else if (payload === "next-page") goRef.current(1);
     });
     return () => { un.then((f) => f()); };
   }, [expand, collapse, d.seedTranslate]);
@@ -229,6 +232,56 @@ export function Island() {
     setPage(next);
     localStorage.setItem("page", next);
   };
+  const goRef = useRef(go);
+  goRef.current = go;
+
+  // ← / → work while expanded, except when typing in a field.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const field = () => setTyping(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement || document.activeElement instanceof HTMLSelectElement);
+    window.addEventListener("focusin", field);
+    window.addEventListener("focusout", () => setTimeout(field));
+    return () => { window.removeEventListener("focusin", field); };
+  }, []);
+  const arrows = expanded && !typing && pages.length > 1;
+  useEffect(() => {
+    invoke("set_arrow_keys", { on: arrows }).catch(() => {});
+  }, [arrows]);
+  useEffect(() => () => { invoke("set_arrow_keys", { on: false }).catch(() => {}); }, []);
+
+  // Press and drag sideways on the panel to switch pages.
+  const pageRef = useRef<HTMLDivElement>(null);
+  const onSwipeStart = (e: React.PointerEvent) => {
+    if (e.button !== 0 || pages.length < 2) return;
+    const t = e.target as HTMLElement;
+    if (t.closest("input, textarea, select, [draggable='true'], .no-swipe")) return;
+    const x0 = e.clientX, y0 = e.clientY;
+    let dx = 0, swiping = false, cancelled = false;
+    const el = pageRef.current;
+    const move = (ev: PointerEvent) => {
+      dx = ev.clientX - x0;
+      const dy = ev.clientY - y0;
+      if (!swiping && !cancelled) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) cancelled = true; // vertical: let lists scroll / select
+        else if (Math.abs(dx) > 10) swiping = true;
+      }
+      if (swiping && el) { el.style.transition = "none"; el.style.transform = `translateX(${dx * 0.6}px)`; el.style.opacity = String(1 - Math.min(0.5, Math.abs(dx) / 400)); }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      if (el) { el.style.transition = ""; el.style.transform = ""; el.style.opacity = ""; }
+      if (!swiping) return;
+      // Don't let the drag end as a click on whatever is under the pointer.
+      const swallow = (ce: MouseEvent) => { ce.stopPropagation(); ce.preventDefault(); };
+      window.addEventListener("click", swallow, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 80);
+      if (Math.abs(dx) > 60) goRef.current(dx < 0 ? 1 : -1);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
   const wheelAcc = useRef(0);
   const onWheel = (e: React.WheelEvent) => {
     if ((e.target as HTMLElement).closest(".scroll")) return;
@@ -336,9 +389,9 @@ export function Island() {
               <button className="icon-btn" title="设置" onClick={() => { holdHover.current = true; collapse(); api.openSettings(); }}><Icon name="settings" size={15} /></button>
             </div>
           </div>
-          <div className="p-main">
+          <div className="p-main" onPointerDown={onSwipeStart}>
             {pages.length > 1 && <button className="nav prev" onClick={() => go(-1)} aria-label="上一页"><Icon name="left" size={14} /></button>}
-            <div className="p-page" key={curPage}><Page /></div>
+            <div className="p-page" key={curPage} ref={pageRef}><Page /></div>
             {pages.length > 1 && <button className="nav next" onClick={() => go(1)} aria-label="下一页"><Icon name="right" size={14} /></button>}
           </div>
           {pages.length > 1 && (

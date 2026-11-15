@@ -64,7 +64,7 @@ pub fn defaults() -> Value {
         "calendars": [],
         "water": { "enabled": false, "goal": 2000, "cup": 250, "interval": 60, "start": "09:00", "end": "21:00" },
         "eventReminder": 10,
-        "jenkins": { "enabled": false, "url": "", "user": "", "jobs": [], "interval": 30 },
+        "jenkins": { "enabled": false, "url": "", "user": "", "mine": true, "jobs": [], "interval": 30 },
         "taskAlerts": true,
         "autoUpdate": true,
         "statusAlerts": { "volume": true, "caps": true, "input": true, "network": true, "power": true, "devices": true },

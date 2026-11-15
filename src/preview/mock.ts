@@ -64,6 +64,7 @@ const data: Record<string, (a: any) => unknown> = {
     { id: "e5", title: "交付验收会议", start: (() => { const x = new Date(); x.setDate(x.getDate() + 2); x.setHours(10, 0, 0, 0); return x.getTime() / 1000; })(), end: (() => { const x = new Date(); x.setDate(x.getDate() + 2); x.setHours(11, 0, 0, 0); return x.getTime() / 1000; })(), all_day: false, location: "", calendar: "工作", color: "#0a84ff" },
     { id: "e6", title: "周会", start: (() => { const x = new Date(); x.setDate(x.getDate() + 5); x.setHours(10, 0, 0, 0); return x.getTime() / 1000; })(), end: (() => { const x = new Date(); x.setDate(x.getDate() + 5); x.setHours(11, 0, 0, 0); return x.getTime() / 1000; })(), all_day: false, location: "", calendar: "工作", color: "#bf5af2" },
   ] }),
+  jenkins_params: () => [{ name: "BRANCH", kind: "string", default: "main", choices: [], description: "" }, { name: "ENV", kind: "choice", default: "", choices: ["staging", "prod"], description: "" }, { name: "SKIP_TESTS", kind: "boolean", default: "false", choices: [], description: "" }],
   get_agents: () => [
     { id: "c1", tool: "claude", title: "重构支付回调重试逻辑", cwd: "/Users/me/work/pay-service", prompt: "回调失败时按指数退避重试三次，并补测试", state: "running", started: now() - 412, updated: now() - 3, result: "" },
     { id: "x1", tool: "codex", title: "修复 Android 长图加载失败", cwd: "/Users/me/work/app", prompt: "FastImage 缩放图失败时回退原图", state: "done", started: now() - 1500, updated: now() - 980, result: "已修复：缩放图加载失败时回退原图一次，原图仍失败才调用业务 onError。\n仅修改 Image.js，测试通过，已推送到 fix/long-images。" },
@@ -71,9 +72,9 @@ const data: Record<string, (a: any) => unknown> = {
     { id: "c3", tool: "claude", title: "用量日志显示渠道中文名", cwd: "/Users/me/work/gateway", prompt: "", state: "done", started: now() - 9000, updated: now() - 7800, result: "完成。" },
   ],
   get_builds: () => [
-    { job: "backend-deploy", number: 482, name: "backend-deploy #482", state: "building", started: now() - 140, duration: 0, estimated: 300, url: "https://ci.example.com/job/backend-deploy/482/", error: "" },
-    { job: "frontend/build-main", number: 1290, name: "frontend » build-main #1290", state: "success", started: now() - 2000, duration: 210, estimated: 220, url: "https://ci.example.com/", error: "" },
-    { job: "e2e-nightly", number: 77, name: "e2e-nightly #77", state: "failure", started: now() - 30000, duration: 1500, estimated: 1500, url: "https://ci.example.com/", error: "" },
+    { job: "backend-deploy", number: 482, name: "backend-deploy #482", state: "building", started: now() - 140, duration: 0, estimated: 300, url: "https://ci.example.com/job/backend-deploy/482/", error: "", updated: now(), mine: true },
+    { job: "frontend/build-main", number: 1290, name: "frontend » build-main #1290", state: "success", started: now() - 2000, duration: 210, estimated: 220, url: "https://ci.example.com/", error: "", updated: now() - 1790, mine: true },
+    { job: "e2e-nightly", number: 77, name: "e2e-nightly #77", state: "failure", started: now() - 30000, duration: 1500, estimated: 1500, url: "https://ci.example.com/", error: "", updated: now() - 28500, mine: false },
   ],
   get_devices: () => [{ name: "MX Master 3S", kind: "mouse", percent: 76, parts: [] }, { name: "Magic Keyboard", kind: "keyboard", percent: 18, parts: [] }, { name: "AirPods Pro", kind: "headphones", percent: 64, parts: [{ label: "左", percent: 64 }, { label: "右", percent: 70 }, { label: "盒", percent: 92 }] }, { name: "Xbox 手柄", kind: "gamepad", percent: 41, parts: [] }],
   get_messages: () => ({ platform: params.get("plat") ?? "windows", apps: [{ id: "wechat", name: "微信", count: 3, active: true, since: now() - 120 }, { id: "qq", name: "QQ", count: null, active: true, since: now() - 30 }, { id: "feishu", name: "飞书", count: 1, active: true, since: now() - 900 }], toast_status: "", toasts: [{ id: 1, app: "QQ", title: "产品群", body: "明天上午 10 点评审，记得带上新版设计稿", at: now() - 30 }, { id: 2, app: "Outlook", title: "周报提醒", body: "本周周报请在周五 18:00 前提交", at: now() - 600 }, { id: 3, app: "GitHub Desktop", title: "推送完成", body: "notchdeck · main", at: now() - 1800 }] }),
