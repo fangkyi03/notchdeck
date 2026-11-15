@@ -1,7 +1,7 @@
 import { forwardRef, type ReactNode } from "react";
 import { fmtBytes, fmtClock, weatherInfo } from "../lib/format";
 import { todayKey } from "../lib/format";
-import type { Column, CompactItem, Config } from "../lib/types";
+import { HAS_MESSAGES, type Column, type CompactItem, type Config } from "../lib/types";
 import { useData } from "./data";
 import { CoreBars, Cover, Dial, Eq, Rings } from "./widgets";
 import { AppBadge } from "./pages/Messages";
@@ -55,6 +55,7 @@ export const Compact = forwardRef<HTMLDivElement, { vertical?: boolean }>(functi
       case "shelf":
         return d.shelf.length ? <span className="c-shelf">📎 {d.shelf.length}</span> : null;
       case "msg": {
+        if (!HAS_MESSAGES) return null;
         const apps = d.messages.apps;
         if (!apps.length) return null;
         return <span className="c-msg">{apps.slice(0, 3).map((a) => (

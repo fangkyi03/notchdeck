@@ -114,7 +114,7 @@
 | 大写锁定 / 输入法 | CoreGraphics / TIS 输入源 | GetKeyState / 键盘布局与输入法中英状态 |
 | 音量 | 系统音量设置 | Core Audio 终结点音量 |
 | 复制文件 | AppleScript | PowerShell `Set-Clipboard -Path` |
-| 消息提醒 | 读取 Dock 图标未读数（`lsappinfo`）：微信、QQ、企业微信、钉钉、飞书、邮件、Telegram、Slack | 监听任务栏闪烁（Shell Hook）提醒上述应用；另读取系统通知中心的通知（需在系统设置中允许通知访问） |
+| 消息提醒 | 不支持（新版 macOS 不再开放 Dock 未读数） | 监听任务栏闪烁（Shell Hook）提醒上述应用；另读取系统通知中心的通知（需在系统设置中允许通知访问） |
 | 正在播放 | Spotify、Apple Music（AppleScript） | 系统媒体会话 SMTC：网易云音乐、QQ 音乐、酷狗、Spotify、浏览器等 |
 | GPU 占用 | IOAccelerator | PDH 性能计数器（3D 引擎） |
 | 全屏隐藏 | 小岛不进入全屏应用所在的空间 | 检测前台窗口是否覆盖整个显示器 |
@@ -167,7 +167,7 @@ rustup target add x86_64-pc-windows-msvc
 - API Key、CalDAV 密码保存在系统钥匙串 / 凭据管理器中。
 - 文件中转只记录文件路径，不复制文件；翻译时原文会发送到你选择的翻译服务。
 - Claude 登录令牌只在内存中用于请求额度接口，不写入磁盘，也不会续期或修改登录。
-- 消息提醒不读取聊天内容：macOS 只读未读数字；Windows 只记录任务栏闪烁，以及你允许访问的系统通知。
+- 消息提醒不读取聊天内容：仅 Windows：只记录任务栏闪烁，以及你允许访问的系统通知。
 - 联网只用于：读取 AI 额度、查询歌词（LRCLIB）、天气（Open-Meteo）与自动定位（ipwho.is）、同步你添加的日历、翻译、检查更新。
 
 ## 项目结构

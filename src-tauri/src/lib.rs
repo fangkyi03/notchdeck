@@ -401,6 +401,7 @@ pub fn run() {
                 flags
             });
             spawn_watchers(app.handle().clone());
+            #[cfg(windows)]
             messages::spawn(app.handle().clone());
             devices::spawn(app.handle().clone());
             let cfg = app.state::<AppState>().config.lock().unwrap().clone();

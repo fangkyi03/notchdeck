@@ -1,3 +1,4 @@
+#![cfg_attr(not(windows), allow(dead_code, unused_imports))]
 //! Chat / mail reminders — one implementation per platform.
 //!
 //! macOS: unread counts from Dock badges (`lsappinfo … StatusLabel`), no message

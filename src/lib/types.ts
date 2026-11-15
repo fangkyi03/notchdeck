@@ -22,6 +22,9 @@ export type MetricId = "cpu" | "mem" | "gpu" | "net" | "disk";
 export type PageId = "devices" | "calendar" | "water" | "translate" | "shelf" | "messages" | "ai" | "details" | "music" | "monitor" | "todo" | "focus" | "clipboard" | "weather";
 export type CompactItem = "devices" | "event" | "water" | "shelf" | "msg" | "music" | "rings" | "cores" | "cpu" | "mem" | "gpu" | "net" | "lyric" | "eq" | "clock" | "weather" | "focus" | "todo";
 
+/** Message alerts are Windows-only (macOS no longer exposes Dock badges). */
+export const HAS_MESSAGES = !navigator.userAgent.includes("Mac");
+
 export type Config = {
   lang: "auto" | "zh" | "en";
   skin: string;

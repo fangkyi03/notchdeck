@@ -8,7 +8,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { COMPACT_LABELS, METRIC_LABELS, PAGE_META, type CalEvent, type CalSource, type CompactItem, type Config, type MonitorInfo, type Provider, type ThemeColors } from "../lib/types";
+import { HAS_MESSAGES, COMPACT_LABELS, METRIC_LABELS, PAGE_META, type CalEvent, type CalSource, type CompactItem, type Config, type MonitorInfo, type Provider, type ThemeColors } from "../lib/types";
 import { setLang } from "../lib/i18n";
 import "./settings.css";
 
@@ -26,7 +26,7 @@ const SECTIONS = [
 ] as const;
 type Sec = (typeof SECTIONS)[number][0];
 
-const ALL_COMPACT = Object.keys(COMPACT_LABELS) as CompactItem[];
+const ALL_COMPACT = (Object.keys(COMPACT_LABELS) as CompactItem[]).filter((i) => HAS_MESSAGES || i !== "msg");
 
 const PRESETS: Record<string, Partial<Provider>> = {
   Claude: { name: "Claude", kind: "claude", color: "#e8916b" },
@@ -170,7 +170,7 @@ function App({ initial }: { initial: Config }) {
       case "pages": return <>
         <h2>展开页面</h2>
         <p className="hint">拖动调整顺序。展开后用左右箭头、滚轮或 ← → 键切换页面。</p>
-        <Sortable items={cfg.pages} keyOf={(p) => p.id} onChange={(pages) => set({ pages })}
+        <Sortable items={cfg.pages.filter((p) => HAS_MESSAGES || p.id !== "messages")} keyOf={(p) => p.id} onChange={(pages) => set({ pages })}
           render={(p) => <><span className="grow">{PAGE_META[p.id].label}</span><Toggle on={p.enabled} set={(v) => set({ pages: cfg.pages.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)) })} /></>} />
         <Row label="面板尺寸" hint="也可以在展开面板上拖动左右和底部边缘调整">
           <input type="number" min={420} max={1200} value={cfg.panel.width} onChange={(e) => set({ panel: { ...cfg.panel, width: +e.target.value } })} /> ×

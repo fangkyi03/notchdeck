@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { api } from "../lib/api";
 import { todayKey } from "../lib/format";
-import type { CalEvent, ClipItem, Device, StatusEvent, Column, Config, Messages, ShelfItem, WaterState, FocusState, LyricLine, Media, Sys, Todo, Weather } from "../lib/types";
+import { HAS_MESSAGES, type  CalEvent, type ClipItem, type Device, type StatusEvent, type Column, type Config, type Messages, type ShelfItem, type WaterState, type FocusState, type LyricLine, type Media, type Sys, type Todo, type Weather } from "../lib/types";
 
 const HIST = 60;
 export type Hist = { cpu: number[]; mem: number[]; gpu: number[]; rx: number[]; tx: number[] };
@@ -214,6 +214,7 @@ export function DataProvider({ initial, children }: { initial: Config; children:
 
   /* ---- messages ---- */
   useEffect(() => {
+    if (!HAS_MESSAGES) return;
     api.messages().then((m) => { msgLoaded.current = true; setMessages(m); });
     const un = listen<Messages>("messages-changed", (e) => setMessages(e.payload));
     return () => { un.then((f) => f()); };

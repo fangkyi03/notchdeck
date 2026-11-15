@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { fmtClock, fmtDate } from "../lib/format";
 import { Icon } from "../lib/icons";
 import { applySkin } from "../lib/themes";
-import { PAGE_META, type Dock, type PageId } from "../lib/types";
+import { HAS_MESSAGES, PAGE_META, type Dock, type PageId } from "../lib/types";
 import { Compact } from "./Compact";
 import { useData } from "./data";
 import { AiPage } from "./pages/Ai";
@@ -50,7 +50,7 @@ export function Island() {
   useEffect(() => setPos(cfg.position), [cfg.position]);
   useEffect(() => setPanel(cfg.panel), [cfg.panel]);
 
-  const pages = cfg.pages.filter((p) => p.enabled).map((p) => p.id);
+  const pages = cfg.pages.filter((p) => p.enabled && (HAS_MESSAGES || p.id !== "messages")).map((p) => p.id);
   const curPage = pages.includes(page) ? page : pages[0] ?? "ai";
 
   /* ---------------- geometry ---------------- */

@@ -192,7 +192,7 @@ npm run tauri build    # 打包安装包</code></pre>
 <figure><img src="screenshots/page-messages.png" alt="消息提醒页"></figure>
 <p>微信、QQ、企业微信、钉钉、飞书、邮件、Telegram、Slack 有新消息时，收起的小岛上会出现带红点的应用图标，消息页里按应用列出。<b>点击</b>即可切换到该应用。</p>
 <h3><span class="tag mac">macOS</span> 工作方式</h3>
-<p>读取 Dock 图标上的未读数字，不读取消息内容。所以只要应用的 Dock 图标上有红色数字，NotchDeck 就能显示；在该应用的通知设置里关闭「标记」后则无法显示。</p>
+<p>macOS 不支持：新版 macOS 不再向其他应用开放 Dock 图标上的未读数，这一页和收起的消息图标在 Mac 上会自动隐藏。</p>
 <h3><span class="tag win">Windows</span> 工作方式</h3>
 <ul>
 <li><b>任务栏闪烁</b>：微信、QQ 收到消息时会让任务栏按钮闪烁，NotchDeck 据此提醒，不读取聊天内容；切换到该应用后提醒自动消失。微信缩到托盘时没有任务栏按钮，此时无法提醒。</li>
