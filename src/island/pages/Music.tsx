@@ -25,8 +25,8 @@ export function MusicPage() {
         <div className="m-top">
           <Cover src={media.artwork} size={64} />
           <div className="m-info">
-            <div className="m-title">{media.title}</div>
-            <div className="m-artist">{[media.artist, media.album].filter(Boolean).join(" · ")}</div>
+            <div className="m-title" data-notr>{media.title}</div>
+            <div className="m-artist" data-notr>{[media.artist, media.album].filter(Boolean).join(" · ")}</div>
           </div>
           <Eq playing={media.playing} height={16} />
         </div>
@@ -41,7 +41,7 @@ export function MusicPage() {
         </div>
       </div>
       <div className="m-lyrics">
-        {lyrics.length ? lines.map((l, i) => <div key={i} className={i === 1 ? "cur" : ""}>{l?.text || " "}</div>) : <div className="muted">暂无歌词</div>}
+        {lyrics.length ? lines.map((l, i) => <div key={i} data-notr className={i === 1 ? "cur" : ""}>{l?.text || " "}</div>) : <div className="muted">暂无歌词</div>}
       </div>
     </div>
   );

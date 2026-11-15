@@ -8,6 +8,7 @@ const handlers: Record<string, number[]> = {};
 let cbId = 1;
 
 const cfg = {
+  lang: params.get("lang") ?? "zh",
   skin: params.get("skin") ?? "classic",
   customTheme: { bg: "#14121a", fg: "#f5f5f7", muted: "#8e8e93", accent: "#bf5af2", card: "#22202a", border: "#2f2c38" },
   shape: params.get("shape") ?? "notch", scale: 1, opacity: 1, position: { x: 0, y: 0, dock: (params.get("dock") ?? "top") as any }, lockPosition: false, monitor: "", proxy: "", autostart: true, clickThrough: false, idleHide: 30, shortcuts: { toggle: "CommandOrControl+Shift+Space", clipboard: "CommandOrControl+Shift+V", translate: "CommandOrControl+Shift+T", todo: "" },

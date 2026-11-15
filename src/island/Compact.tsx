@@ -48,7 +48,7 @@ export const Compact = forwardRef<HTMLDivElement, { vertical?: boolean }>(functi
         const e = d.events.find((x) => !x.all_day && x.end > t && x.start - t < 12 * 3600);
         if (!e) return null;
         const mins = Math.round((e.start - t) / 60);
-        return <span className="c-event"><i style={{ background: e.color || "var(--accent)" }} />{mins > 0 ? `${mins < 60 ? `${mins}分` : `${Math.floor(mins / 60)}时`}后` : "进行中"} {e.title}</span>;
+        return <span className="c-event"><i style={{ background: e.color || "var(--accent)" }} />{mins > 0 ? `${mins < 60 ? `${mins}分` : `${Math.floor(mins / 60)}时`}后` : "进行中"} <span data-notr>{e.title}</span></span>;
       }
       case "water":
         return cfg.water.enabled ? <span className="c-water">💧{Math.round((d.water.ml / Math.max(1, cfg.water.goal)) * 100)}%</span> : null;
@@ -84,7 +84,7 @@ export const Compact = forwardRef<HTMLDivElement, { vertical?: boolean }>(functi
       case "lyric": {
         if (!media?.title) return null;
         const line = lyricIndex >= 0 ? lyrics[lyricIndex]?.text : "";
-        return <span className="c-lyric" key={line || media.title}>{line || media.title}</span>;
+        return <span className="c-lyric" data-notr key={line || media.title}>{line || media.title}</span>;
       }
       case "eq":
         return media?.title ? <Eq playing={media.playing} height={13} /> : null;

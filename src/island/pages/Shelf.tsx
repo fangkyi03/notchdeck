@@ -44,7 +44,7 @@ export function ShelfPage() {
   return (
     <div className="shelf">
       <div className="shelf-bar">
-        <span className="muted">{shelf.length} 个文件{picked.length ? ` · 已选 ${picked.length}` : ""}</span>
+        <span className="muted">{`${shelf.length} 个文件`}{picked.length ? ` · 已选 ${picked.length}` : ""}</span>
         <span className="grow" />
         <button className="pill-btn" onClick={() => act("copy", picked.length ? picked : shelf.map((s) => s.path))}>{picked.length ? "复制所选" : "复制全部"}</button>
         <button className="pill-btn" onClick={() => remove(picked.length ? picked : shelf.map((s) => s.path))}>{picked.length ? "移除所选" : "全部移除"}</button>
@@ -57,7 +57,7 @@ export function ShelfPage() {
             onClick={(e) => { if (e.metaKey || e.ctrlKey) { const n = new Set(sel); n.has(f.path) ? n.delete(f.path) : n.add(f.path); setSel(n); } }}
             onDoubleClick={() => act("open", [f.path])}>
             <FileIcon info={f} />
-            <span className="sh-name">{f.name}</span>
+            <span className="sh-name" data-notr>{f.name}</span>
             <span className="sh-meta">{f.exists ? (f.is_dir ? "文件夹" : fmtBytes(f.size)) : "已移动或删除"}</span>
             <span className="sh-acts">
               <button className="icon-btn" title="在访达 / 资源管理器中显示" onClick={(e) => { e.stopPropagation(); act("reveal", [f.path]); }}><Icon name="monitor" size={12} /></button>

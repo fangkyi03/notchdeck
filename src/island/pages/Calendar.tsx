@@ -22,7 +22,7 @@ export function MonthGrid({ month, setMonth, selected, onSelect, marks }: {
     <div className="mgrid">
       <div className="mg-head">
         <button className="icon-btn" onClick={() => shift(-1)}><Icon name="left" size={12} /></button>
-        <span>{month.getFullYear()}年{month.getMonth() + 1}月</span>
+        <span>{`${month.getFullYear()}年${month.getMonth() + 1}月`}</span>
         <button className="icon-btn" onClick={() => shift(1)}><Icon name="right" size={12} /></button>
       </div>
       <div className="mg-cells">
@@ -87,7 +87,7 @@ export function CalendarPage() {
       <div className="cal-day">
         <div className="cal-day-head">
           <b>{sel === todayKey() ? "今天" : sel.slice(5).replace("-", "月") + "日"}</b>
-          {next && sel === todayKey() && <span className="cal-next">{until(next.start - nowSec)} · {next.title}</span>}
+          {next && sel === todayKey() && <span className="cal-next">{until(next.start - nowSec)} · <span data-notr>{next.title}</span></span>}
           <span className="grow" />
           <button className="pill-btn" onClick={() => setAdding(!adding)}>+ 新增</button>
         </div>
@@ -104,7 +104,7 @@ export function CalendarPage() {
             <div key={e.id} className={`cal-ev ${e.end < nowSec ? "past" : ""}`}>
               <span className="cal-t">{e.all_day ? "全天" : hm(e.start)}</span>
               <i className="cal-bar" style={{ background: e.color || "var(--accent)" }} />
-              <span className="cal-title">{e.title}{e.location && <small className="muted"> · {e.location}</small>}</span>
+              <span className="cal-title" data-notr>{e.title}{e.location && <small className="muted"> · {e.location}</small>}</span>
               <span className="muted small">{e.all_day ? e.calendar : `${hm(e.end)} 结束`}</span>
               {e.calendar === "本机" && <button className="icon-btn x" onClick={() => setLocalEvents(localEvents.filter((x) => x.id !== e.id))}><Icon name="x" size={11} /></button>}
             </div>
@@ -130,10 +130,10 @@ export function WaterPage() {
       </div>
       <div className="w-main">
         <div className="w-amt">{(water.ml / 1000).toFixed(2)}<small> / {(w.goal / 1000).toFixed(1)} L</small></div>
-        <div className="muted">今天喝了 {water.log.length} 次{w.enabled && next && pct < 100 ? ` · 下次提醒 ${String(next.getHours()).padStart(2, "0")}:${String(next.getMinutes()).padStart(2, "0")}` : ""}{!w.enabled ? " · 提醒已关闭（设置 › 天气与专注）" : ""}</div>
+        <div className="muted">{`今天喝了 ${water.log.length} 次`}{w.enabled && next && pct < 100 ? ` · ${"下次提醒"} ${String(next.getHours()).padStart(2, "0")}:${String(next.getMinutes()).padStart(2, "0")}` : ""}{!w.enabled ? " · 提醒已关闭（设置 › 天气 · 饮水 · 专注）" : ""}</div>
         <div className="w-ctl">
-          <button className="w-drink" onClick={() => drink()}>💧 喝一口 {w.cup}ml</button>
-          <button className="pill-btn" onClick={() => drink(w.cup * 2)}>大杯 {w.cup * 2}ml</button>
+          <button className="w-drink" onClick={() => drink()}>{`💧 喝一口 ${w.cup}ml`}</button>
+          <button className="pill-btn" onClick={() => drink(w.cup * 2)}>{`大杯 ${w.cup * 2}ml`}</button>
           <button className="pill-btn" disabled={!water.log.length} onClick={undoDrink}>撤销</button>
         </div>
       </div>

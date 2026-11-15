@@ -2,6 +2,7 @@ use serde_json::{json, Value};
 
 pub fn defaults() -> Value {
     json!({
+        "lang": "auto",
         "skin": "classic",
         "customTheme": { "bg": "#14121a", "fg": "#f5f5f7", "muted": "#8e8e93", "accent": "#bf5af2", "card": "#22202a", "border": "#2f2c38" },
         "shape": "notch",

@@ -9,6 +9,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { COMPACT_LABELS, METRIC_LABELS, PAGE_META, type CalEvent, type CalSource, type CompactItem, type Config, type MonitorInfo, type Provider, type ThemeColors } from "../lib/types";
+import { setLang } from "../lib/i18n";
 import "./settings.css";
 
 const SECTIONS = [
@@ -92,13 +93,14 @@ function App({ initial }: { initial: Config }) {
   const [problems, setProblems] = useState<string[]>([]);
   useEffect(() => { const un = listen<string[]>("runtime-problems", (e) => setProblems(e.payload)); return () => { un.then((f) => f()); }; }, []);
   useEffect(() => { applySkin(cfg); }, [cfg]);
-  useEffect(() => { const un = listen<Config>("config-changed", (e) => setCfgState(e.payload)); return () => { un.then((f) => f()); }; }, []);
-  const set = (patch: Partial<Config>) => { const n = { ...cfg, ...patch }; setCfgState(n); api.saveConfig(n); };
+  useEffect(() => { const un = listen<Config>("config-changed", (e) => { setLang(e.payload.lang); setCfgState(e.payload); }); return () => { un.then((f) => f()); }; }, []);
+  const set = (patch: Partial<Config>) => { const n = { ...cfg, ...patch }; if (patch.lang) setLang(patch.lang); setCfgState(n); api.saveConfig(n); };
 
   const body = (() => {
     switch (sec) {
       case "general": return <>
         <h2>常规</h2>
+        <Row label="语言 · Language" hint="界面语言，跟随系统时按系统语言自动选择"><Seg value={cfg.lang ?? "auto"} options={[["auto", "跟随系统"], ["zh", "中文"], ["en", "English"]]} set={(v) => set({ lang: v })} /></Row>
         <Row label="展开方式"><Seg value={cfg.expandMode} options={[["hover", "悬停展开"], ["click", "点击展开"]]} set={(v) => set({ expandMode: v })} /></Row>
         <Row label="悬停延迟" hint="鼠标停留多久后展开"><input type="range" min={0} max={800} step={20} value={cfg.hoverDelay} onChange={(e) => set({ hoverDelay: +e.target.value })} /><span className="num">{cfg.hoverDelay} ms</span></Row>
         <Row label="全屏时自动隐藏" hint="游戏、视频全屏时不打扰（macOS 全屏应用自动隐藏）"><Toggle on={cfg.hideOnFullscreen} set={(v) => set({ hideOnFullscreen: v })} /></Row>
@@ -324,11 +326,11 @@ function AboutSection({ cfg, set }: { cfg: Config; set: (p: Partial<Config>) => 
     <Row label="自动检查更新" hint="启动时和之后每天检查一次，有新版本时在小岛上提示"><Toggle on={cfg.autoUpdate} set={(v) => set({ autoUpdate: v })} /></Row>
     <Row label="检查更新" hint={state.phase === "none" ? "已是最新版本" : state.phase === "error" ? state.text : state.phase === "checking" ? "正在检查…" : undefined}>
       {state.phase === "available" && <button className="btn primary" onClick={install}>下载并安装</button>}
-      {state.phase === "downloading" && <span className="num">下载中 {state.pct ?? ""}%</span>}
+      {state.phase === "downloading" && <span className="num">{`下载中 ${state.pct ?? ""}%`}</span>}
       {state.phase === "ready" && <button className="btn primary" onClick={() => relaunch()}>重启以完成更新</button>}
       {!["available", "downloading", "ready"].includes(state.phase) && <button className="btn" disabled={state.phase === "checking"} onClick={doCheck}>立即检查</button>}
     </Row>
-    {state.phase === "available" && <pre className="release-notes">新版本 v{state.text}</pre>}
+    {state.phase === "available" && <pre className="release-notes">{`新版本 v${state.text}`}</pre>}
     <p className="hint" style={{ marginTop: 16 }}>
       <a href="https://fangkyi03.github.io/notchdeck/" target="_blank">官网</a> · <a href="https://fangkyi03.github.io/notchdeck/guide.html" target="_blank">使用说明</a> · <a href="https://github.com/fangkyi03/notchdeck" target="_blank">GitHub</a> · <a href="https://github.com/fangkyi03/notchdeck/issues" target="_blank">反馈问题</a>
     </p>
@@ -366,7 +368,7 @@ function AiSection({ cfg, set }: { cfg: Config; set: (p: Partial<Config>) => voi
           {["deepseek", "openrouter", "moonshot", "glm", "zai", "kimi_code"].includes(p.kind) && <KeyInput id={p.id} label={p.kind === "kimi_code" ? "Kimi Code API Key（sk-kimi- 开头）" : p.kind === "glm" || p.kind === "zai" ? "Coding Plan API Key" : "API Key"} />}
           {p.kind === "cursor" && <small className="hint">读取本机 Cursor 的登录（不需要填写），显示本月额度与按量计费。实验性：接口可能随 Cursor 更新变化。</small>}
           {p.kind === "antigravity" && <small className="hint">需要 Antigravity 桌面版正在运行，从它的本地服务读取各模型额度。实验性。</small>}
-          {p.kind === "command" && <label className="f">命令（输出 JSON 数组 [{"{"}title, percent, value, resetAt{"}"}] 或纯文本）<textarea rows={2} value={p.command ?? ""} onChange={(e) => upd(p.id, { command: e.target.value })} /></label>}
+          {p.kind === "command" && <label className="f">{"命令（输出 JSON 数组 [{title, percent, value, resetAt}] 或纯文本）"}<textarea rows={2} value={p.command ?? ""} onChange={(e) => upd(p.id, { command: e.target.value })} /></label>}
           {p.kind === "http" && <>
             <label className="f">URL（仅 HTTPS）<input value={p.url ?? ""} onChange={(e) => upd(p.id, { url: e.target.value })} /></label>
             <label className="f">请求头 JSON<HeadersInput value={p.headers ?? {}} set={(h) => upd(p.id, { headers: h })} /></label>
@@ -446,4 +448,4 @@ function HeadersInput({ value, set }: { value: Record<string, string>; set: (v: 
   return <textarea rows={2} className={bad ? "bad" : ""} value={t} onChange={(e) => { setT(e.target.value); try { set(JSON.parse(e.target.value || "{}")); setBad(false); } catch { setBad(true); } }} />;
 }
 
-api.getConfig().then((cfg) => createRoot(document.getElementById("root")!).render(<App initial={cfg} />));
+api.getConfig().then((cfg) => { setLang(cfg.lang); return cfg; }).then((cfg) => createRoot(document.getElementById("root")!).render(<App initial={cfg} />));

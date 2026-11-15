@@ -199,7 +199,10 @@ fn want_monitor(app: &AppHandle) -> String {
 fn place_island(app: AppHandle, width: f64, height: f64, x: f64, y: f64, dock: Option<String>) -> Result<(f64, f64), String> {
     let win = app.get_webview_window("main").ok_or("no main window")?;
     let mon = geom::pick(&app, &win, &want_monitor(&app)).ok_or("no monitor")?;
-    geom::place(&win, &mon, geom::Dock::parse(dock.as_deref().unwrap_or("top")), width, height, x, y)
+    let d = geom::Dock::parse(dock.as_deref().unwrap_or("top"));
+    #[cfg(target_os = "macos")]
+    set_level(&win, if matches!(d, geom::Dock::Top) { 1000 } else { 19 });
+    geom::place(&win, &mon, d, width, height, x, y)
 }
 
 /// Follow the cursor while dragging (across displays; snaps to top / left / right).
@@ -207,7 +210,10 @@ fn place_island(app: AppHandle, width: f64, height: f64, x: f64, y: f64, dock: O
 #[allow(clippy::too_many_arguments)]
 fn drag_island(app: AppHandle, hw: f64, hh: f64, vw: f64, vh: f64, grab_x: f64, grab_y: f64, min_y: f64) -> Result<geom::DragResult, String> {
     let win = app.get_webview_window("main").ok_or("no main window")?;
-    geom::drag(&win, (hw, hh), (vw, vh), (grab_x, grab_y), min_y)
+    let r = geom::drag(&win, (hw, hh), (vw, vh), (grab_x, grab_y), min_y)?;
+    #[cfg(target_os = "macos")]
+    set_level(&win, if matches!(r.dock, geom::Dock::Top) { 1000 } else { 19 });
+    Ok(r)
 }
 
 #[derive(serde::Serialize)]
@@ -249,13 +255,29 @@ fn open_settings_window(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
     WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
-        .title("NotchDeck 设置")
+        .title(if is_en(&app.state::<AppState>().config.lock().unwrap()) { "NotchDeck Settings" } else { "NotchDeck 设置" })
         .inner_size(860.0, 640.0)
         .min_inner_size(680.0, 480.0)
         .disable_drag_drop_handler()
         .build()
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// macOS window level. Top-docked: 1000 so the notch covers the menu bar.
+/// Bottom / side-docked: 19, just under the Dock (20) but above normal windows,
+/// so the island never covers the Dock.
+#[cfg(target_os = "macos")]
+fn set_level(w: &tauri::WebviewWindow, level: isize) {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+    if let Ok(ptr) = w.ns_window() {
+        let ptr = ptr as usize;
+        let _ = w.run_on_main_thread(move || unsafe {
+            let obj = &*(ptr as *const AnyObject);
+            let _: () = msg_send![obj, setLevel: level];
+        });
+    }
 }
 
 /// macOS: floating windows sit *below* the menu bar. Lift the island above it.
@@ -351,8 +373,9 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            let settings = MenuItem::with_id(app, "settings", "设置…", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "退出 NotchDeck", true, None::<&str>)?;
+            let en = is_en(&app.state::<AppState>().config.lock().unwrap());
+            let settings = MenuItem::with_id(app, "settings", if en { "Settings…" } else { "设置…" }, true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", if en { "Quit NotchDeck" } else { "退出 NotchDeck" }, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&settings, &quit])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -388,4 +411,13 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running NotchDeck");
+}
+
+/// UI language for native strings (tray menu, window titles): config "lang", else the OS locale.
+pub(crate) fn is_en(cfg: &serde_json::Value) -> bool {
+    match cfg.get("lang").and_then(|v| v.as_str()) {
+        Some("zh") => false,
+        Some("en") => true,
+        _ => !sys_locale::get_locale().unwrap_or_default().to_lowercase().starts_with("zh"),
+    }
 }

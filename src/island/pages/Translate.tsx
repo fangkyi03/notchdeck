@@ -51,7 +51,7 @@ export function TranslatePage() {
         </div>
       </div>
       <div className="tr-col tr-out">
-        {err ? <div className="err-text">{err}</div> : out ? <div className="tr-text">{out}</div> : <div className="muted">译文会显示在这里</div>}
+        {err ? <div className="err-text">{err}</div> : out ? <div className="tr-text" data-notr>{out}</div> : <div className="muted">译文会显示在这里</div>}
         {out && !err && <button className="icon-btn tr-copy" title="复制译文" onClick={() => api.clipCopy(out).then(() => pushAlert("译文已复制"))}><Icon name="copy" size={14} /></button>}
       </div>
     </div>

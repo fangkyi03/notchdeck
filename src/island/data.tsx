@@ -1,3 +1,4 @@
+import { setLang } from "../lib/i18n";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -111,7 +112,7 @@ export function DataProvider({ initial, children }: { initial: Config; children:
   }, []);
 
   useEffect(() => {
-    const un = listen<Config>("config-changed", (e) => setCfgState(e.payload));
+    const un = listen<Config>("config-changed", (e) => { setLang(e.payload.lang); setCfgState(e.payload); });
     return () => { un.then((f) => f()); };
   }, []);
 

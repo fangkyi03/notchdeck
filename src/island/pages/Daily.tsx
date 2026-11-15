@@ -34,7 +34,7 @@ function TodoList({ date }: { date: string }) {
         {list.map((t) => (
           <div key={t.id} className={`todo-item ${t.done ? "done" : ""} ${t.current ? "current" : ""}`}>
             <button className="chk" onClick={() => update(t.id, { done: !t.done, current: false, doneAt: !t.done ? Date.now() : undefined })} aria-label="完成">{t.done ? "✓" : ""}</button>
-            <span className="tt">{t.text}</span>
+            <span className="tt" data-notr>{t.text}</span>
             {!t.done && date === todayKey() && <button className={`cur-btn ${t.current ? "on" : ""}`} onClick={() => update(t.id, { current: !t.current })}>{t.current ? "进行中" : "开始"}</button>}
             <button className="x" onClick={() => setTodos(todos.filter((x) => x.id !== t.id))} aria-label="删除"><Icon name="x" size={12} /></button>
           </div>
@@ -88,7 +88,7 @@ export function TodoPage() {
           {history.map(([day, items]) => (
             <div key={day} className="hist-day">
               <div className="hist-head"><b>{day === today ? "今天" : day.slice(5)}</b><span className="muted small">{items.filter((t) => t.done).length}/{items.length} 完成</span></div>
-              {items.map((t) => <div key={t.id} className={`hist-item ${t.done ? "done" : ""}`}>{t.done ? "✓" : "○"} {t.text}</div>)}
+              {items.map((t) => <div key={t.id} className={`hist-item ${t.done ? "done" : ""}`}>{t.done ? "✓" : "○"} <span data-notr>{t.text}</span></div>)}
             </div>
           ))}
           {!history.length && <div className="muted pad">完成的待办会按日期记录在这里</div>}
@@ -96,7 +96,7 @@ export function TodoPage() {
       )}
       {view === "notes" && (
         <div className="todo-list">
-          <div className="hist-head"><b>{today.slice(5).replace("-", "月")}日 · 笔记</b><span className="muted small">自动保存</span></div>
+          <div className="hist-head"><b>{`${+today.slice(5, 7)}月${+today.slice(8)}日 · 笔记`}</b><span className="muted small">自动保存</span></div>
           <textarea className="note-area" value={notes[today] ?? ""} placeholder="今天想记下点什么……" onChange={(e) => setNote(today, e.target.value)} />
         </div>
       )}
@@ -127,7 +127,7 @@ export function FocusPage() {
         <div className="f-time">{Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
           <button className="icon-btn" onClick={() => mode(focus.mode)} title="重置"><Icon name="reset" size={16} /></button>
         </div>
-        <div className="muted">{focus.mode === "work" ? "专注时间" : "休息时间"} · 今日完成 {focus.rounds} 个番茄</div>
+        <div className="muted">{focus.mode === "work" ? "专注时间" : "休息时间"} </div><div className="muted">{`今日完成 ${focus.rounds} 个番茄`}</div>
         <div className="f-ctl">
           <button className={`pill ${focus.mode === "work" ? "on work" : ""}`} onClick={() => mode("work")}>专注</button>
           <button className="f-play" style={{ background: color }} onClick={toggle}><Icon name={focus.running ? "pause" : "play"} size={18} /></button>
@@ -156,8 +156,8 @@ export function ClipboardPage() {
         {sorted.map((c) => (
           <div key={c.i} className={`clip-item ${c.pinned ? "pinned" : ""} ${c.kind === "image" ? "is-image" : ""}`} onClick={() => api.clipRestore(c.i).then(() => pushAlert(c.kind === "image" ? "图片已复制到剪贴板" : "已复制到剪贴板")).catch((e) => pushAlert(String(e)))} title="点击复制">
             {c.kind === "image"
-              ? <span className="ct"><img className="clip-thumb" src={c.thumb} alt="" draggable={false} /><small className="muted">{c.text}</small></span>
-              : <span className="ct">{/^#[0-9a-f]{3,8}$/i.test(c.text.trim()) && <i className="swatch" style={{ background: c.text.trim() }} />}{c.text.trim().slice(0, 200)}</span>}
+              ? <span className="ct"><img className="clip-thumb" src={c.thumb} alt="" draggable={false} /><small className="muted" data-notr>{c.text}</small></span>
+              : <span className="ct" data-notr>{/^#[0-9a-f]{3,8}$/i.test(c.text.trim()) && <i className="swatch" style={{ background: c.text.trim() }} />}{c.text.trim().slice(0, 200)}</span>}
             <button className={`icon-btn ${c.pinned ? "on" : ""}`} onClick={(e) => { e.stopPropagation(); act(c.i, "pin"); }} title="置顶"><Icon name="pin" size={13} /></button>
             <button className="icon-btn" onClick={(e) => { e.stopPropagation(); act(c.i, "delete"); }} title="删除"><Icon name="x" size={13} /></button>
           </div>
@@ -183,8 +183,8 @@ export function WeatherPage() {
         <span className="w-icon">{info.icon}</span>
         <div>
           <div className="w-temp">{Math.round(w.temp)}°<small>{info.text}</small></div>
-          <div className="muted">{w.city} · 体感 {Math.round(w.feels)}° · 湿度 {Math.round(w.humidity)}% · 风 {Math.round(w.wind)} km/h</div>
-          <div className={`muted small ${stale ? "warn" : ""}`}>日出 {w.sunrise} · 日落 {w.sunset} · {new Date(w.updated * 1000).toLocaleTimeString().slice(0, 5)} 更新</div>
+          <div className="muted"><span data-notr>{w.city}</span> · {`体感 ${Math.round(w.feels)}°`} · {`湿度 ${Math.round(w.humidity)}%`} · {`风 ${Math.round(w.wind)} km/h`}</div>
+          <div className={`muted small ${stale ? "warn" : ""}`}>{`日出 ${w.sunrise}`} · {`日落 ${w.sunset}`} · {`${new Date(w.updated * 1000).toLocaleTimeString().slice(0, 5)} 更新`}</div>
         </div>
       </div>
       <div className="w-days">

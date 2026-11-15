@@ -23,6 +23,7 @@ export type PageId = "devices" | "calendar" | "water" | "translate" | "shelf" | 
 export type CompactItem = "devices" | "event" | "water" | "shelf" | "msg" | "music" | "rings" | "cores" | "cpu" | "mem" | "gpu" | "net" | "lyric" | "eq" | "clock" | "weather" | "focus" | "todo";
 
 export type Config = {
+  lang: "auto" | "zh" | "en";
   skin: string;
   customTheme: ThemeColors;
   shape: "notch" | "capsule" | "line";

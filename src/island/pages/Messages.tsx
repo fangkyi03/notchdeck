@@ -39,8 +39,8 @@ export function MessagesPage() {
           {m.toast_status && <div className="muted small pad">{m.toast_status}</div>}
           {m.toasts.map((t) => (
             <div key={t.id} className="toast">
-              <div className="t-head"><b>{t.title || t.app}</b><span className="muted small">{t.app} · {ago(t.at)}</span></div>
-              {t.body && <div className="t-body">{t.body}</div>}
+              <div className="t-head" data-notr><b>{t.title || t.app}</b><span className="muted small">{t.app} · {ago(t.at)}</span></div>
+              {t.body && <div className="t-body" data-notr>{t.body}</div>}
             </div>
           ))}
           {!m.toast_status && !m.toasts.length && <div className="muted pad">系统通知中心暂无通知</div>}
