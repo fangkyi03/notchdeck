@@ -368,3 +368,7 @@ html[lang="en"] .p-title em { margin-left: 0.28em; }
 .bd-field input[type=text], .bd-field input[type=password], .bd-field select, .bd-field textarea { min-width: 0; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; font: inherit; }
 .bd-field input[type=checkbox] { justify-self: start; }
 .pill-btn.primary { background: var(--accent); color: #fff; }
+.tr-bar { min-width: 0; }
+.tr-bar button { white-space: nowrap; flex-shrink: 0; }
+.tr-bar select { min-width: 0; flex-shrink: 1; max-width: 120px; text-overflow: ellipsis; }
+.tr-go { line-height: 1.6; }

@@ -15,7 +15,7 @@ const cfg = {
   shape: params.get("shape") ?? "notch", scale: 1, opacity: 1, position: { x: 0, y: 0, dock: (params.get("dock") ?? "top") as any }, lockPosition: false, monitor: "", proxy: "", autostart: true, clickThrough: false, idleHide: 30, shortcuts: { toggle: "CommandOrControl+Shift+Space", clipboard: "CommandOrControl+Shift+V", translate: "CommandOrControl+Shift+T", todo: "" },
   clipboardImages: true, translate: { provider: "deepseek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", target: "auto" },
   calendars: [{ id: "c1", name: "工作", kind: "ics", url: "https://example.com/work.ics", color: "#0a84ff", enabled: true }],
-  water: { enabled: true, goal: 2000, cup: 250, interval: 60, start: "09:00", end: "21:00" }, eventReminder: 10, autoUpdate: true,
+  water: { enabled: params.get("water") === "1", goal: 2000, cup: 250, interval: 60, start: "09:00", end: "21:00" }, eventReminder: 10, autoUpdate: true,
   statusAlerts: { volume: true, caps: true, input: true, network: true, power: true, devices: true },
   expandMode: "hover", hoverDelay: 0, hideOnFullscreen: true, clock24: true,
   compact: { items: (params.get("items") ?? "music,rings,cores,cpu,mem,gpu,net,eq").split(","), autoWidth: true, width: 320, ringMode: "single", showRemaining: false, alerts: false },
