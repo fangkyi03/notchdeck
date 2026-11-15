@@ -13,6 +13,7 @@ import { ShelfPage } from "./pages/Shelf";
 import { TranslatePage } from "./pages/Translate";
 import { CalendarPage, WaterPage } from "./pages/Calendar";
 import { DevicesPage } from "./pages/Devices";
+import { TasksPage } from "./pages/Tasks";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { DetailsPage } from "./pages/Details";
 import { ClipboardPage, FocusPage, TodoPage, WeatherPage } from "./pages/Daily";
@@ -26,7 +27,7 @@ const CAPSULE_GAP = 8;
 const COLLAPSE_MS = 280;
 
 const PAGES: Record<PageId, () => JSX.Element | null> = {
-  devices: DevicesPage, calendar: CalendarPage, water: WaterPage, translate: TranslatePage, shelf: ShelfPage, messages: MessagesPage, ai: AiPage, details: DetailsPage, music: MusicPage, monitor: MonitorPage, todo: TodoPage, focus: FocusPage, clipboard: ClipboardPage, weather: WeatherPage,
+  tasks: TasksPage, devices: DevicesPage, calendar: CalendarPage, water: WaterPage, translate: TranslatePage, shelf: ShelfPage, messages: MessagesPage, ai: AiPage, details: DetailsPage, music: MusicPage, monitor: MonitorPage, todo: TodoPage, focus: FocusPage, clipboard: ClipboardPage, weather: WeatherPage,
 };
 
 export function Island() {

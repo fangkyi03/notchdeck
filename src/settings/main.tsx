@@ -18,6 +18,7 @@ const SECTIONS = [
   ["compact", "收起内容", "todo"],
   ["pages", "展开页面", "clipboard"],
   ["ai", "AI 额度", "ai"],
+  ["tasks", "任务", "monitor"],
   ["monitor", "系统监控", "monitor"],
   ["translate", "翻译", "copy"],
   ["calendar", "日历", "todo"],
@@ -184,6 +185,7 @@ function App({ initial }: { initial: Config }) {
         <Sortable items={cfg.metrics} keyOf={(m) => m.id} onChange={(metrics) => set({ metrics })}
           render={(m) => <><span className="grow">{METRIC_LABELS[m.id]}</span><input type="color" value={m.color} onChange={(e) => set({ metrics: cfg.metrics.map((x) => (x.id === m.id ? { ...x, color: e.target.value } : x)) })} /></>} />
       </>;
+      case "tasks": return <TasksSection cfg={cfg} set={set} />;
       case "translate": return <TranslateSection cfg={cfg} set={set} />;
       case "calendar": return <CalendarSection cfg={cfg} set={set} />;
       case "about": return <AboutSection cfg={cfg} set={set} />;
@@ -243,6 +245,37 @@ const CAL_HINTS: Record<string, string> = {
   ics: "订阅链接（https:// 或 webcal://）。iCloud：日历 App 中共享日历 › 公开日历；Google：日历设置 › 私密 iCal 地址；飞书 / 钉钉 / 企业微信 / Outlook：日历设置中的「订阅 / 导出链接」",
   caldav: "CalDAV 地址，会自动发现账户下的所有日历。iCloud 填 https://caldav.icloud.com 并使用 App 专用密码（appleid.apple.com 生成）；飞书、钉钉等填写其提供的 CalDAV 服务器与账号",
 };
+
+function TasksSection({ cfg, set }: { cfg: Config; set: (p: Partial<Config>) => void }) {
+  const j = cfg.jenkins;
+  const upd = (p: Partial<Config["jenkins"]>) => set({ jenkins: { ...j, ...p } });
+  const [jobs, setJobs] = useState(j.jobs.join("\n"));
+  const [test, setTest] = useState("");
+  const check = async () => {
+    setTest("正在连接…");
+    const list = await invoke<{ job: string; error: string; state: string; number: number }[]>("refresh_builds").catch((e) => { setTest(String(e)); return null; });
+    if (!list) return;
+    if (!list.length) return setTest("还没有添加任务");
+    setTest(list.map((b) => `${b.job}：${b.error || `#${b.number} ${b.state}`}`).join("\n"));
+  };
+  return <>
+    <h2>任务</h2>
+    <p className="hint">任务页显示最近 24 小时的 Claude Code 和 Codex 任务：哪些在运行、跑了多久，完成后的最后一条回复。直接读取本机会话记录（~/.claude、~/.codex），只读，不需要启动任何服务，也不会修改它们的配置。</p>
+    <Row label="完成时提醒" hint="Claude / Codex 任务完成、Jenkins 构建结束时在小岛上提示"><Toggle on={cfg.taskAlerts} set={(v) => set({ taskAlerts: v })} /></Row>
+    <h2 style={{ marginTop: 24 }}>Jenkins</h2>
+    <p className="hint">定时请求 Jenkins 的 REST 接口读取各任务最近一次构建，不需要在 Jenkins 上安装插件或配置回调。</p>
+    <Row label="开启 Jenkins"><Toggle on={j.enabled} set={(v) => upd({ enabled: v })} /></Row>
+    <Row label="Jenkins 地址" hint="例如 https://jenkins.example.com"><TextField value={j.url} set={(v) => upd({ url: v.replace(/\/+$/, "") })} width={320} /></Row>
+    <Row label="用户名"><TextField value={j.user} set={(v) => upd({ user: v })} /></Row>
+    <div className="row"><div className="row-l"><div>API Token</div><small>Jenkins 右上角用户名 › 设置（Configure）› API Token › 添加新 Token；保存在系统钥匙串</small></div><div className="row-r" style={{ flex: 1, maxWidth: 420 }}><KeyInput id="jenkins" label="API Token" /></div></div>
+    <Row label="刷新间隔"><Seg value={String(j.interval)} options={[["15", "15 秒"], ["30", "30 秒"], ["60", "1 分钟"], ["300", "5 分钟"]]} set={(v) => upd({ interval: +v })} /></Row>
+    <label className="f">关注的任务（每行一个；文件夹里的任务写成 文件夹/任务名）
+      <textarea rows={4} value={jobs} placeholder={"backend-deploy\nfrontend/build-main"} onChange={(e) => setJobs(e.target.value)} onBlur={() => upd({ jobs: jobs.split("\n").map((s) => s.trim()).filter(Boolean) })} />
+    </label>
+    <div className="add"><button className="btn" onClick={check}>测试连接</button></div>
+    {test && <pre className="release-notes">{test}</pre>}
+  </>;
+}
 
 function CalendarSection({ cfg, set }: { cfg: Config; set: (p: Partial<Config>) => void }) {
   const [msg, setMsg] = useState("");

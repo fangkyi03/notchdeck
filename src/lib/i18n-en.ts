@@ -1,5 +1,24 @@
 /** Chinese source string → English. `{x}` marks a variable part. */
 export const EN: Record<string, string> = {
+  // ---- tasks
+  "任务": "Tasks", "状态": "Status", "任务状态": "Tasks", "运行中的任务": "Running tasks", "运行中": "Running", "已完成": "Done", "已停止": "Stopped",
+  "{n} 秒": "{n}s", "{h} 小时 {m} 分": "{h}h {m}m", "{n} 小时前": "{n} h ago", "{n} 天前": "{n} d ago", "用时 {t}": "took {t}",
+  "还在运行，完成后这里会显示最后的回复": "Still running; the final reply will show up here",
+  "这一轮没有完成：可能在等你确认，或者被中断了": "This turn didn't finish: it may be waiting for you, or it was interrupted",
+  "打开目录": "Open folder", "复制结果": "Copy result", "已复制": "Copied",
+  "构建中": "Building", "成功": "Success", "失败": "Failed", "不稳定": "Unstable", "已中止": "Aborted", "未构建": "Not built", "出错": "Error",
+  "最近 24 小时没有 Claude Code / Codex 任务": "No Claude Code / Codex tasks in the last 24 hours", "直接读取本机的会话记录，不需要额外配置": "Read straight from local session logs, nothing to set up",
+  "在 设置 › 任务 中添加要关注的任务": "Add jobs to watch in Settings › Tasks",
+  "Claude 完成：{t}": "Claude finished: {t}", "Codex 完成：{t}": "Codex finished: {t}", "✅ {n} 构建成功": "✅ {n} succeeded", "❌ {n} 构建失败": "❌ {n} failed",
+  "账号或 API Token 不对": "Wrong user or API token", "找不到这个任务（还没有构建过？）": "Job not found (never built?)",
+  "正在连接…": "Connecting…", "还没有添加任务": "No jobs added yet",
+  "任务页显示最近 24 小时的 Claude Code 和 Codex 任务：哪些在运行、跑了多久，完成后的最后一条回复。直接读取本机会话记录（~/.claude、~/.codex），只读，不需要启动任何服务，也不会修改它们的配置。": "The Tasks page shows Claude Code and Codex tasks from the last 24 hours: what's running, for how long, and the final reply when done. It reads local session logs (~/.claude, ~/.codex) read-only; no server runs and their config isn't touched.",
+  "完成时提醒": "Alert when finished", "Claude / Codex 任务完成、Jenkins 构建结束时在小岛上提示": "Show an alert when a Claude / Codex task or a Jenkins build finishes",
+  "定时请求 Jenkins 的 REST 接口读取各任务最近一次构建，不需要在 Jenkins 上安装插件或配置回调。": "Polls Jenkins' REST API for each job's last build; no plugin or webhook needed.",
+  "开启 Jenkins": "Enable Jenkins", "Jenkins 地址": "Jenkins URL", "例如 https://jenkins.example.com": "e.g. https://jenkins.example.com", "用户名": "User",
+  "Jenkins 右上角用户名 › 设置（Configure）› API Token › 添加新 Token；保存在系统钥匙串": "Jenkins › your name › Configure › API Token › Add new token; stored in the system keychain",
+  "刷新间隔": "Refresh every",
+  "关注的任务（每行一个；文件夹里的任务写成 文件夹/任务名）": "Jobs to watch (one per line; jobs in folders as folder/job)", "测试连接": "Test connection",
   // ---- settings: sections
   "常规": "General", "外观与皮肤": "Appearance", "收起内容": "Collapsed", "展开页面": "Pages", "AI 额度": "AI quota",
   "系统监控": "System monitor", "翻译": "Translate", "日历": "Calendar", "天气 · 饮水 · 专注": "Weather · Water · Focus", "关于与更新": "About & updates",

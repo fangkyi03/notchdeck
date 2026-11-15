@@ -19,8 +19,8 @@ export type Provider = {
 };
 
 export type MetricId = "cpu" | "mem" | "gpu" | "net" | "disk";
-export type PageId = "devices" | "calendar" | "water" | "translate" | "shelf" | "messages" | "ai" | "details" | "music" | "monitor" | "todo" | "focus" | "clipboard" | "weather";
-export type CompactItem = "devices" | "event" | "water" | "shelf" | "msg" | "music" | "rings" | "cores" | "cpu" | "mem" | "gpu" | "net" | "lyric" | "eq" | "clock" | "weather" | "focus" | "todo";
+export type PageId = "tasks" | "devices" | "calendar" | "water" | "translate" | "shelf" | "messages" | "ai" | "details" | "music" | "monitor" | "todo" | "focus" | "clipboard" | "weather";
+export type CompactItem = "tasks" | "devices" | "event" | "water" | "shelf" | "msg" | "music" | "rings" | "cores" | "cpu" | "mem" | "gpu" | "net" | "lyric" | "eq" | "clock" | "weather" | "focus" | "todo";
 
 /** Message alerts are Windows-only (macOS no longer exposes Dock badges). */
 export const HAS_MESSAGES = !navigator.userAgent.includes("Mac");
@@ -46,6 +46,9 @@ export type Config = {
   water: { enabled: boolean; goal: number; cup: number; interval: number; start: string; end: string };
   /** Minutes before a timed event to show a reminder (0 = off). */
   eventReminder: number;
+  jenkins: { enabled: boolean; url: string; user: string; jobs: string[]; interval: number };
+  /** Alert on the island when an agent task or a Jenkins build finishes. */
+  taskAlerts: boolean;
   autoUpdate: boolean;
   statusAlerts: Record<"volume" | "caps" | "input" | "network" | "power" | "devices", boolean>;
   /** Display key ("name@x,y"); empty = primary. */
@@ -151,6 +154,7 @@ export type FocusState = { mode: "work" | "rest"; running: boolean; endsAt: numb
 export const PAGE_META: Record<PageId, { title: [string, string]; label: string }> = {
   messages: { title: ["消息", "提醒"], label: "消息提醒" },
   shelf: { title: ["文件", "中转"], label: "文件中转" },
+  tasks: { title: ["任务", "状态"], label: "任务状态" },
   translate: { title: ["快捷", "翻译"], label: "快捷翻译" },
   calendar: { title: ["今日", "日程"], label: "日程" },
   water: { title: ["饮水", "提醒"], label: "饮水提醒" },
@@ -167,6 +171,7 @@ export const PAGE_META: Record<PageId, { title: [string, string]; label: string 
 
 export const COMPACT_LABELS: Record<CompactItem, string> = {
   msg: "消息提醒",
+  tasks: "运行中的任务",
   shelf: "文件中转数量",
   event: "下一个日程",
   water: "饮水进度",
@@ -187,3 +192,6 @@ export const COMPACT_LABELS: Record<CompactItem, string> = {
 };
 
 export const METRIC_LABELS: Record<MetricId, string> = { cpu: "CPU", mem: "内存", gpu: "GPU", net: "网速", disk: "硬盘" };
+
+export type AgentTask = { id: string; tool: "claude" | "codex"; title: string; cwd: string; prompt: string; state: "running" | "done" | "idle"; started: number; updated: number; result: string };
+export type Build = { job: string; number: number; name: string; state: "building" | "success" | "failure" | "unstable" | "aborted" | "notbuilt" | "error"; started: number; duration: number; estimated: number; url: string; error: string };

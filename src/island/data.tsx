@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { api } from "../lib/api";
 import { todayKey } from "../lib/format";
-import { HAS_MESSAGES, type  CalEvent, type ClipItem, type Device, type StatusEvent, type Column, type Config, type Messages, type ShelfItem, type WaterState, type FocusState, type LyricLine, type Media, type Sys, type Todo, type Weather } from "../lib/types";
+import { HAS_MESSAGES, type  CalEvent, type ClipItem, type Device, type AgentTask, type Build, type StatusEvent, type Column, type Config, type Messages, type ShelfItem, type WaterState, type FocusState, type LyricLine, type Media, type Sys, type Todo, type Weather } from "../lib/types";
 
 const HIST = 60;
 export type Hist = { cpu: number[]; mem: number[]; gpu: number[]; rx: number[]; tx: number[] };
@@ -43,6 +43,9 @@ type Data = {
   notes: Record<string, string>;
   setNote: (date: string, text: string) => void;
   devices: Device[];
+  agents: AgentTask[];
+  builds: Build[];
+  setBuilds: (b: Build[]) => void;
   hud: StatusEvent | null;
   todos: Todo[];
   setTodos: (t: Todo[]) => void;
@@ -90,6 +93,8 @@ export function DataProvider({ initial, children }: { initial: Config; children:
   const [notes, setNotes] = useState<Record<string, string>>({});
   const reminded = useRef<Set<string>>(new Set());
   const [devices, setDevices] = useState<Device[]>([]);
+  const [agents, setAgents] = useState<AgentTask[]>([]);
+  const [builds, setBuilds] = useState<Build[]>([]);
   const [hud, setHud] = useState<StatusEvent | null>(null);
   const hudTimer = useRef<number>();
   const [translateSeed, setTranslateSeed] = useState({ text: "", n: 0 });
@@ -341,6 +346,33 @@ export function DataProvider({ initial, children }: { initial: Config; children:
     return () => { a.then((f) => f()); b.then((f) => f()); };
   }, []);
 
+  /* ---- agent tasks & Jenkins ---- */
+  const prevAgents = useRef<Map<string, string> | null>(null);
+  const prevBuilds = useRef<Map<string, string> | null>(null);
+  useEffect(() => {
+    invoke<AgentTask[]>("get_agents").then(setAgents);
+    invoke<Build[]>("get_builds").then(setBuilds);
+    const a = listen<AgentTask[]>("agents-changed", (e) => setAgents(e.payload));
+    const b = listen<Build[]>("builds-changed", (e) => setBuilds(e.payload));
+    return () => { a.then((f) => f()); b.then((f) => f()); };
+  }, []);
+  useEffect(() => {
+    const prev = prevAgents.current;
+    prevAgents.current = new Map(agents.map((t) => [t.id, t.state]));
+    if (!prev || !cfg.taskAlerts) return;
+    for (const t of agents) if (t.state === "done" && prev.get(t.id) === "running") pushAlert(`${t.tool === "claude" ? "Claude" : "Codex"} 完成：${t.title}`);
+  }, [agents, cfg.taskAlerts, pushAlert]);
+  useEffect(() => {
+    const prev = prevBuilds.current;
+    prevBuilds.current = new Map(builds.map((b) => [b.job, `${b.number}:${b.state}`]));
+    if (!prev || !cfg.taskAlerts) return;
+    for (const b of builds) {
+      const p = prev.get(b.job);
+      if (b.state === "building" || b.state === "error" || p === `${b.number}:${b.state}`) continue;
+      if (p && (p.endsWith(":building") || !p.startsWith(`${b.number}:`))) pushAlert(`${b.state === "success" ? "✅" : "❌"} ${b.name} ${b.state === "success" ? "构建成功" : "构建失败"}`);
+    }
+  }, [builds, cfg.taskAlerts, pushAlert]);
+
   /* ---- daily notes ---- */
   const setNote = useCallback((date: string, text: string) => {
     setNotes((n) => { const next = { ...n, [date]: text }; if (!text) delete next[date]; api.storeSet("notes", next); return next; });
@@ -373,7 +405,7 @@ export function DataProvider({ initial, children }: { initial: Config; children:
 
   const value: Data = {
     cfg, setCfg, sys, hist, cols, refreshUsage: () => refreshUsage(true), media, position, lyrics, lyricIndex,
-    weather, weatherError, refreshWeather: () => refreshWeather(true), clips, messages, reloadClips, shelf, setShelf, addToShelf, translateSeed, seedTranslate, events, calErrors, refreshCalendar: () => refreshCalendar(true), localEvents, setLocalEvents, water: waterToday, drink, undoDrink, notes, setNote, devices, hud, todos, setTodos, focus, setFocus, now, alert, pushAlert,
+    weather, weatherError, refreshWeather: () => refreshWeather(true), clips, messages, reloadClips, shelf, setShelf, addToShelf, translateSeed, seedTranslate, events, calErrors, refreshCalendar: () => refreshCalendar(true), localEvents, setLocalEvents, water: waterToday, drink, undoDrink, notes, setNote, devices, agents, builds, setBuilds, hud, todos, setTodos, focus, setFocus, now, alert, pushAlert,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

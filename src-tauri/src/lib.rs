@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 mod calendar;
 mod config;
 mod devices;
@@ -11,6 +12,7 @@ mod fullscreen;
 mod media;
 mod messages;
 mod sysmon;
+mod tasks;
 mod usage;
 
 use serde_json::Value;
@@ -161,6 +163,39 @@ async fn calendar_events(state: State<'_, AppState>, force: Option<bool>) -> Res
 #[tauri::command]
 fn calendar_import(text: String) -> Vec<calendar::Event> {
     calendar::import(&text)
+}
+
+#[tauri::command]
+fn get_agents() -> Vec<tasks::AgentTask> {
+    tasks::agents()
+}
+
+#[tauri::command]
+fn get_builds() -> Vec<tasks::Build> {
+    tasks::builds()
+}
+
+#[tauri::command]
+async fn refresh_builds(app: AppHandle) -> Result<Vec<tasks::Build>, String> {
+    blocking(move || { tasks::refresh_jenkins(&app); tasks::builds() }).await
+}
+
+/// Open an http(s) link in the default browser.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("bad url".into());
+    }
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(&url).spawn();
+    #[cfg(windows)]
+    let r = {
+        use std::os::windows::process::CommandExt;
+        std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", &url]).creation_flags(0x0800_0000).spawn()
+    };
+    #[cfg(not(any(target_os = "macos", windows)))]
+    let r = std::process::Command::new("xdg-open").arg(&url).spawn();
+    r.map(|_| ()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -366,7 +401,7 @@ pub fn run() {
             get_config, save_config, store_get, store_set, get_sys, get_procs, get_usage, get_media, media_control, get_lyrics,
             get_weather, clip_list, clip_copy, clip_restore, clip_update, clip_clear, place_island, drag_island, list_monitors, show_island, open_settings,
             secret_set, secret_has, get_messages, open_message_app, set_click_through,
-            shelf_info, shelf_action, drag_icon, translate_text, calendar_events, calendar_import, get_devices
+            shelf_info, shelf_action, drag_icon, translate_text, calendar_events, calendar_import, get_devices, get_agents, get_builds, refresh_builds, open_url
         ])
         .setup(|app| {
             net::set_override(app.state::<AppState>().config.lock().unwrap().get("proxy").and_then(|v| v.as_str()).unwrap_or(""));
@@ -404,6 +439,7 @@ pub fn run() {
             #[cfg(windows)]
             messages::spawn(app.handle().clone());
             devices::spawn(app.handle().clone());
+            tasks::spawn(app.handle().clone());
             let cfg = app.state::<AppState>().config.lock().unwrap().clone();
             for p in runtime::apply(app.handle(), &cfg) {
                 eprintln!("[notchdeck] {p}");

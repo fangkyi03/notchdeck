@@ -1,3 +1,4 @@
+import { tasksSummary } from "./pages/Tasks";
 import { forwardRef, type ReactNode } from "react";
 import { fmtBytes, fmtClock, weatherInfo } from "../lib/format";
 import { todayKey } from "../lib/format";
@@ -52,6 +53,11 @@ export const Compact = forwardRef<HTMLDivElement, { vertical?: boolean }>(functi
       }
       case "water":
         return cfg.water.enabled ? <span className="c-water">💧{Math.round((d.water.ml / Math.max(1, cfg.water.goal)) * 100)}%</span> : null;
+      case "tasks": {
+        const { running, failed } = tasksSummary(d.agents, d.builds);
+        if (!running && !failed) return null;
+        return <span className="c-tasks">{running > 0 && <><i className="tk-spin" />{running}</>}{failed > 0 && <b className="c-fail">✕{failed}</b>}</span>;
+      }
       case "shelf":
         return d.shelf.length ? <span className="c-shelf">📎 {d.shelf.length}</span> : null;
       case "msg": {
