@@ -33,6 +33,7 @@ export function Island() {
   const d = useData();
   const { cfg, setCfg, now } = d;
   const [expanded, setExpanded] = useState(false);
+  const holdHover = useRef(false);
   const [compactW, setCompactW] = useState(160);
   const [compactH, setCompactH] = useState(120);
   const [tucked, setTucked] = useState(false);
@@ -186,6 +187,8 @@ export function Island() {
       if (busy.current) return;
       if (inside) lastActive.current = Date.now();
       if (inside && cfg.clickThrough && !expandedRef.current) return; // game mode: shortcut only
+      if (!inside) holdHover.current = false;
+      if (inside && holdHover.current) return; // just collapsed via settings: wait until the pointer leaves
       if (inside) {
         clearTimeout(timers.current.close);
         setTucked(false);
@@ -329,7 +332,7 @@ export function Island() {
               {(curPage === "ai" || curPage === "details" || curPage === "weather" || curPage === "calendar") && (
                 <button className="icon-btn" title="刷新" onClick={() => (curPage === "calendar" ? d.refreshCalendar() : curPage !== "weather" ? d.refreshUsage() : d.refreshWeather())}><Icon name="refresh" size={15} /></button>
               )}
-              <button className="icon-btn" title="设置" onClick={() => api.openSettings()}><Icon name="settings" size={15} /></button>
+              <button className="icon-btn" title="设置" onClick={() => { holdHover.current = true; collapse(); api.openSettings(); }}><Icon name="settings" size={15} /></button>
             </div>
           </div>
           <div className="p-main">
