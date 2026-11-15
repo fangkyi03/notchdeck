@@ -83,8 +83,9 @@ export function Island() {
   // Measure the compact row after every render. Grow immediately, but only shrink
   // after the content has stayed narrower for a while, so ticking numbers don't
   // make the island breathe. Widths are rounded up to 8px steps.
+  const [replace, setReplace] = useState(0);
   const shrinkTimer = useRef<number>();
-  useLayoutEffect(() => {
+  const measure = () => {
     const h = Math.ceil((compactRef.current?.offsetHeight ?? 0) / 8) * 8;
     if (side && h && h !== compactH) setCompactH(h);
     const raw = compactRef.current?.offsetWidth ?? 0;
@@ -103,7 +104,20 @@ export function Island() {
       clearTimeout(shrinkTimer.current);
       shrinkTimer.current = undefined;
     }
-  });
+  };
+  const measureRef = useRef(measure);
+  measureRef.current = measure;
+  useLayoutEffect(() => measure());
+  // Content can also change size outside React renders (images and fonts loading,
+  // translated text), so watch the row itself; otherwise the window stays too
+  // small until the next mouse move re-renders.
+  useEffect(() => {
+    const el = compactRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => measureRef.current());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Keep the window sized to the collapsed pill (debounced via the shrink timer when collapsing).
   useEffect(() => {
@@ -112,7 +126,7 @@ export function Island() {
       timers.current.shrink = window.setTimeout(() => place(collapsed), expandedRef.current ? 0 : 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collapsed.w, collapsed.h, expanded, shoulder, s, y, dock]);
+  }, [collapsed.w, collapsed.h, expanded, shoulder, s, y, dock, replace]);
 
   useEffect(() => { place(collapsed).then(() => api.show()); /* first paint */ // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -321,6 +335,7 @@ export function Island() {
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
       busy.current = false;
+      setReplace((n) => n + 1); // apply any size change skipped while dragging
       if (moved && last) {
         const r: { monitor: string; dock: Dock; x: number; y: number } = last;
         setCfg({ ...cfg, position: { x: r.x, y: r.y, dock: r.dock }, monitor: r.monitor });
