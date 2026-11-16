@@ -314,15 +314,48 @@ fn claude_fetch() -> Result<(String, Vec<Quota>), (String, Option<u64>)> {
             return Err((msg, None));
         }
     };
-    let mut quotas = vec![];
-    for (key, title) in [("five_hour", "5 小时"), ("seven_day", "每周"), ("seven_day_opus", "每周 Opus"), ("seven_day_sonnet", "每周 Sonnet")] {
-        if let Some(q) = v.get(key).filter(|x| x.is_object()) {
-            if let Some(p) = q.get("utilization").and_then(|x| x.as_f64()) {
-                quotas.push(Quota { title: title.into(), percent: Some(p), reset_at: iso_ts(q.get("resets_at")), ..Default::default() });
+    Ok((plan, claude_quotas(&v)))
+}
+
+/// Every limit in the usage response: any object with a `utilization` field, so new
+/// per-model limits (e.g. `seven_day_fable`) show up without code changes.
+/// Also accepts list-shaped entries (`[{ "model": …, "utilization": … }]`).
+fn claude_quotas(v: &Value) -> Vec<Quota> {
+    fn title_of(key: &str) -> String {
+        let cap = |s: &str| s.split(['_', '-']).filter(|w| !w.is_empty()).map(|w| { let mut c = w.chars(); c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default() }).collect::<Vec<_>>().join(" ");
+        match key {
+            "five_hour" => "5 小时".into(),
+            "seven_day" => "每周".into(),
+            k if k.starts_with("seven_day_") => format!("每周 {}", cap(&k[10..])),
+            k if k.starts_with("five_hour_") => format!("5 小时 {}", cap(&k[10..])),
+            k => cap(k),
+        }
+    }
+    fn push(out: &mut Vec<Quota>, title: String, q: &Value) {
+        if let Some(p) = q.get("utilization").and_then(|x| x.as_f64()) {
+            if !out.iter().any(|x| x.title == title) {
+                out.push(Quota { title, percent: Some(p), reset_at: iso_ts(q.get("resets_at")), ..Default::default() });
             }
         }
     }
-    Ok((plan, quotas))
+    let mut out = vec![];
+    let Some(obj) = v.as_object() else { return out };
+    // Session and overall weekly first, then the rest in response order.
+    let mut keys: Vec<&String> = obj.keys().collect();
+    keys.sort_by_key(|k| match k.as_str() { "five_hour" => 0, "seven_day" => 1, _ => 2 });
+    for k in keys {
+        let val = &obj[k];
+        if val.is_object() {
+            push(&mut out, title_of(k), val);
+        } else if let Some(arr) = val.as_array() {
+            for item in arr {
+                let name = ["display_name", "name", "model", "id"].iter().find_map(|f| item.get(*f).and_then(|x| x.as_str())).unwrap_or(k);
+                let window = item.get("window").or_else(|| item.get("period")).and_then(|x| x.as_str()).map(title_of).unwrap_or_default();
+                push(&mut out, format!("{} {}", window, title_of(name)).trim().to_string(), item);
+            }
+        }
+    }
+    out
 }
 
 fn claude(col: &mut Column, force: bool) {
@@ -922,4 +955,21 @@ fn listening_ports(pid: u32) -> Vec<u16> {
         }
     }
     ports
+}
+
+#[cfg(test)]
+mod quota_tests {
+    #[test]
+    fn picks_up_any_limit() {
+        let v = serde_json::json!({
+            "seven_day_fable": { "utilization": 100.0, "resets_at": "2026-11-20T00:00:00Z" },
+            "five_hour": { "utilization": 12.0, "resets_at": null },
+            "seven_day": { "utilization": 40.0 },
+            "seven_day_opus": null,
+            "extra_usage": { "is_enabled": false },
+        });
+        let q = super::claude_quotas(&v);
+        let t: Vec<_> = q.iter().map(|x| (x.title.as_str(), x.percent)).collect();
+        assert_eq!(t, vec![("5 小时", Some(12.0)), ("每周", Some(40.0)), ("每周 Fable", Some(100.0))]);
+    }
 }

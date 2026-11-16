@@ -26,6 +26,7 @@ export const EN: Record<string, string> = {
   "显示与我相关的任务": "Show jobs related to me", "自动找出最近 10 次构建里由你触发、或包含你提交的任务；所有构建按更新时间排序": "Finds jobs whose last 10 builds were started by you or include your commits; everything is sorted by last update",
   "额外关注的任务（每行一个；文件夹里的任务写成 文件夹/任务名）": "Extra jobs to watch (one per line; jobs in folders as folder/job)",
   "Jenkins 未开启": "Jenkins is off", "请先在 设置 › 任务 中填写用户名和 API Token": "Enter a user and API token in Settings › Tasks first", "没有权限构建这个任务": "You don't have permission to build this job",
+  "每周 {m}": "Weekly {m}", "5 小时 {m}": "5 hours {m}",
   // ---- settings: sections
   "常规": "General", "外观与皮肤": "Appearance", "收起内容": "Collapsed", "展开页面": "Pages", "AI 额度": "AI quota",
   "系统监控": "System monitor", "翻译": "Translate", "日历": "Calendar", "天气 · 饮水 · 专注": "Weather · Water · Focus", "关于与更新": "About & updates",
